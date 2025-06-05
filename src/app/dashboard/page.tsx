@@ -2,34 +2,47 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-// We would ideally get user info from a verified token or a client-side store
-// For now, this is a placeholder
+import { onAuthStateChanged, User } from 'firebase/auth'; // Import onAuthStateChanged and User type
+import { auth } from '../../lib/firebaseClient'; // Corrected import path
 
 export default function DashboardPage() {
-  const [userName, setUserName] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null); // Initialize to null
   const router = useRouter();
+  const [showPracticeOptions, setShowPracticeOptions] = useState(false);
 
-  // Placeholder for fetching user data or checking auth status client-side
-  // In a real app, you might get this from a context, a store, or by decoding the token (if safe to do so client-side)
   useEffect(() => {
-    // Simulate fetching user data
-    // This is NOT secure and just for illustrative purposes.
-    // Auth check should happen in middleware and/or server components.
-    const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1];
-    if (!token) {
-      // router.push('/login'); // This redirection should ideally be handled by middleware
-      console.log("No token found, redirect should be handled by middleware.")
-    } else {
-      // In a real app, you'd verify the token and get user details.
-      // For now, let's just assume a user name.
-      setUserName("Valued User"); 
+    if (!auth) {
+      console.log("Firebase auth is not initialized. Displaying default user name.");
+      setUserName("Valued User"); // Fallback if auth is not available
+      return;
     }
+
+    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+      if (user) {
+        // User is signed in
+        setUserName(user.displayName || "Valued User");
+      } else {
+        // User is signed out
+        console.log("No user signed in. Redirect should be handled by middleware. Displaying default user name.");
+        setUserName("Valued User"); // Fallback or handle redirection
+        // router.push('/login'); // This redirection should ideally be handled by middleware
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, [router]);
 
   const handleLogout = async () => {
-    // Clear the cookie by calling an API route or by setting expiry to the past
-    // For now, just redirect to login and simulate cookie removal for client
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    if (auth) {
+      try {
+        await auth.signOut();
+        console.log("User signed out from Firebase");
+      } catch (error) {
+        console.error("Error signing out from Firebase: ", error);
+      }
+    }
     router.push('/login');
   };
 
@@ -39,15 +52,84 @@ export default function DashboardPage() {
   // }
 
   return (
-    <div style={{ maxWidth: "600px", margin: "50px auto", padding: "20px", textAlign: "center" }}>
-      <h1>Welcome to Your Dashboard{userName ? `, ${userName}` : ''}!</h1>
-      <p>This is your personal space. More features coming soon!</p>
+    <div style={{ position: "relative", minHeight: "100vh", padding: "20px" }}>
       <button 
         onClick={handleLogout}
-        style={{ marginTop: "20px", padding: "10px 15px", backgroundColor: "red", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
+        style={{
+          position: "absolute",
+          top: "20px",
+          right: "20px",
+          padding: "10px 15px",
+          backgroundColor: "red",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer"
+        }}
       >
         Logout
       </button>
+
+      <div style={{ maxWidth: "800px", margin: "50px auto", padding: "20px", textAlign: "left" }}>
+        <h1 style={{ fontSize: "3rem", marginBottom: "20px" }}>
+          {userName ? `Hi, ${userName}!` : 'Loading user...'}
+        </h1>
+        <p style={{ marginBottom: "30px" }}>This is your personal space. More features coming soon!</p>
+
+        <div 
+          style={{ marginTop: "30px", position: "relative" }}
+        >
+          <button
+            onMouseEnter={() => setShowPracticeOptions(true)}
+            onMouseLeave={() => setShowPracticeOptions(false)}
+            style={{
+              padding: "12px 20px",
+              backgroundColor: "#007bff",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "16px"
+            }}
+          >
+            Start Practice
+          </button>
+          {showPracticeOptions && (
+            <div 
+              onMouseEnter={() => setShowPracticeOptions(true)}
+              onMouseLeave={() => setShowPracticeOptions(false)}
+              style={{
+                position: "absolute",
+                top: "100%", 
+                left: "0",
+                marginTop: "5px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "5px",
+                backgroundColor: "white",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                padding: "10px",
+                boxShadow: "0px 4px 8px rgba(0,0,0,0.1)",
+                zIndex: 10
+              }}
+            >
+              <button 
+                onClick={() => router.push('/practice?time=15')}
+                style={{ padding: "8px 12px", backgroundColor: "#f0f0f0", border: "none", borderRadius: "4px", cursor: "pointer" }}
+              >
+                15 mins
+              </button>
+              <button 
+                onClick={() => router.push('/practice?time=30')}
+                style={{ padding: "8px 12px", backgroundColor: "#f0f0f0", border: "none", borderRadius: "4px", cursor: "pointer" }}
+              >
+                30 mins
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
