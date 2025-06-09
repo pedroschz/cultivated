@@ -1,6 +1,8 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
+import { getFirestore } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -17,7 +19,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
+let app: FirebaseApp | undefined;
 if (typeof window !== "undefined" && !getApps().length) { // Ensure Firebase is initialized only on the client-side
   app = initializeApp(firebaseConfig);
 } else if (typeof window !== "undefined") {
@@ -25,5 +27,7 @@ if (typeof window !== "undefined" && !getApps().length) { // Ensure Firebase is 
 }
 
 const auth = app ? getAuth(app) : undefined; // getAuth might error if app is not initialized (e.g. on server)
+const storage = app ? getStorage(app) : undefined;
+const db = app ? getFirestore(app) : undefined;
 
-export { app, auth };
+export { app, auth, storage, db };

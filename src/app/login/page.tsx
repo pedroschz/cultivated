@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebaseClient"; 
+import { auth, db } from "@/lib/firebaseClient"; 
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -17,8 +18,8 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    if (!auth) {
-      setError("Firebase auth is not initialized. Check your firebaseClient.ts configuration.");
+    if (!auth || !db) {
+      setError("Firebase is not initialized. Check your firebaseClient.ts configuration.");
       setLoading(false);
       return;
     }
@@ -28,6 +29,12 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       if (user) {
+        // Update lastLogin in Firestore
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, {
+          lastLogin: serverTimestamp()
+        });
+
         const idToken = await user.getIdToken();
 
         const res = await fetch("/api/set-token", {
@@ -75,11 +82,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "50px auto", padding: "20px", border: "1px solid #ccc", borderRadius: "8px" }}>
-      <h1>Login</h1>
-      <form onSubmit={handleLogin}>
-        <div style={{ marginBottom: "10px" }}>
-          <label htmlFor="email">Email:</label>
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
+      <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+      <form onSubmit={handleLogin} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email:</label>
           <input
             type="email"
             id="email"
@@ -87,11 +94,11 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={loading}
-            style={{ width: "100%", padding: "8px", marginTop: "5px" }}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
-        <div style={{ marginBottom: "10px" }}>
-          <label htmlFor="password">Password:</label>
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password:</label>
           <input
             type="password"
             id="password"
@@ -99,16 +106,23 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={loading}
-            style={{ width: "100%", padding: "8px", marginTop: "5px" }}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ padding: "10px 15px", backgroundColor: "#0070f3", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+        >
           {loading ? "Logging In..." : "Login"}
         </button>
       </form>
-      <p style={{ marginTop: "15px" }}>
-        Don\'t have an account? <a href="/signup">Sign Up</a>
+      <p className="mt-4 text-center text-sm text-gray-600">
+        Don't have an account?{" "}
+        <a href="/signup" className="text-blue-500 hover:text-blue-600">
+          Sign Up
+        </a>
       </p>
     </div>
   );
