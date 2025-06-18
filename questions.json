@@ -1,25 +1,140 @@
 [
   {
-    "id": "75e07a4d",
-    "field": 4,
+    "id": "fa80893a",
+    "field": 1,
     "domain": 0,
     "difficulty": 0,
-    "question": "To make sure they got the nutrition they needed while in space, the astronauts of NASA's Gemini missions were given menus for three meals a day (meals A, B, and C) on a four-day rotating schedule. Looking at the sample of food items from these menus, a student notes that on day 1, the menu included ______",
+    "question": "If 2x + 3 = 9, what is the value of 6x - 1?",
+    "options": "",
+    "answer": 17,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "0adbe034",
+    "field": 1,
+    "domain": 0,
+    "difficulty": 0,
+    "question": "If 4x - 28 = -24, what is the value of x - 7?",
+    "options": ["-24", "-22", "-6", "-1"],
+    "answer": 2,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "3c8fdc40",
+    "field": 9,
+    "domain": 1,
+    "difficulty": 0,
+    "question": "A printer produces posters at a constant rate of 42 posters per minute. At what rate, in posters per hour, does the printer produce the posters?",
+    "options": "",
+    "answer": 2520,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "3f5398a6",
+    "field": 8,
+    "domain": 1,
+    "difficulty": 0,
+    "question": "For a person m miles from a flash of lightning, the length of the time interval from the moment the person sees the lightning to the moment the person hears the thunder is k seconds. The ratio of m to k can be estimated to be 1 to 5. According to this estimate, the person is how many miles from a flash of lightning if the time interval is 25 seconds?",
     "options": [
-      "shrimp cocktail for meal B",
-      "hot cocoa for meal C",
-      "sugar cookie cubes for meal B",
-      "chicken and vegetables for meal A"
+      "10",
+      "9",
+      "6",
+      "5"
+    ],
+    "answer": 3,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "7f2524bf",
+    "field": 22,
+    "domain": 2,
+    "difficulty": 0,
+    "question": "The graph shown gives the estimated value, in dollars, of a tablet as a function of the number of months since it was purchased. What is the best interpretation of the y-intercept of the graph in this context?",
+    "options": [
+      "The estimated value of the tablet was $225 when it was purchased.",
+      "The estimated value of the tablet 24 months after it was purchased was $225.",
+      "The estimated value of the tablet had decreased by $225 in the 24 months after it was purchased.",
+      "The estimated value of the tablet decreased by approximately 2.25% each year after it was purchased."
+    ],
+    "answer": 0,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "e9aed539",
+    "field": 22,
+    "domain": 2,
+    "difficulty": 0,
+    "question": "The graph shown will be translated up 4 units. Which of the following will be the resulting graph?",
+    "options": [
+      "Graph A",
+      "Graph B",
+      "Graph C",
+      "Graph D"
+    ],
+    "answer": 0,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "93f48423",
+    "field": 31,
+    "domain": 3,
+    "difficulty": 0,
+    "question": "What is the area, in square inches, of a rectangle with a length of 7 inches and a width of 6 inches?",
+    "options": [
+      "13",
+      "20",
+      "42",
+      "84"
     ],
     "answer": 2,
     "imageURL": "",
     "token": ""
   },
   {
-    "id": "3091f805",
-    "field": 4,
-    "domain": 0,
+    "id": "5252e606",
+    "field": 31,
+    "domain": 3,
     "difficulty": 0,
+    "question": "The side length of a square is 55 centimeters (cm). What is the area, in cm², of the square?",
+    "options": [
+      "110",
+      "220",
+      "3,025",
+      "12,100"
+    ],
+    "answer": 2,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "75e07a4d",
+    "field": 37,
+    "domain": 4,
+    "difficulty": 0,
+    "passage": "",
+    "question": "To make sure they got the nutrition they needed while in space, the astronauts of NASA's Gemini missions were given menus for three meals a day (meals A, B, and C) on a four-day rotating schedule. Looking at the sample of food items from these menus, a student notes that on day 1, the menu included ______.",
+    "options": [
+      "shrimp cocktail for meal B.",
+      "hot cocoa for meal C.",
+      "sugar cookie cubes for meal B.",
+      "chicken and vegetables for meal A."
+    ],
+    "answer": 2,
+    "imageURL": "gs://cultivated.firebasestorage.app/name-here-etcetera",
+    "token": "etcetera-c8e0-4e17-824b-03d7b0157577"
+  },
+  {
+    "id": "3091f805",
+    "field": 37,
+    "domain": 4,
+    "difficulty": 0,
+    "passage": "",
     "question": "Which finding from the experiment, if true, would most directly support Garza and Robles's hypothesis?",
     "options": [
       "None of the sea stars climbed to the tops of the tanks, but sea stars in the tank with only seawater moved around the bottom of the tank more than sea stars in the other tank did.",
@@ -32,130 +147,104 @@
     "token": ""
   },
   {
-    "id": "0770b53d",
-    "field": 4,
-    "domain": 0,
+    "id": "84b5125b",
+    "field": 40,
+    "domain": 5,
     "difficulty": 0,
-    "question": "Which quotation from O Pioneers! most effectively illustrates the claim that Alexandra has a deep emotional connection to her natural surroundings?",
+    "passage": "Artist Marilyn Dingle’s intricate, coiled baskets are ______ sweetgrass and palmetto palm. Following a Gullah technique that originated in West Africa, Dingle skillfully winds a thin palm frond around a bunch of sweetgrass with the help of a “sewing bone” to create the basket’s signature look that no factory can reproduce",
+    "question": "Which choice completes the text with the most logical and precise word or phrase?",
     "options": [
-      "She had never known before how much the country meant to her. The chirping of the insects down in the long grass had been like the sweetest music...",
-      "Alexandra talked to the men about their crops and to the women about their poultry...",
-      "Alexandra drove off alone. The rattle of her wagon was lost in the howling of the wind...",
-      "It was Alexandra who read the papers and followed the markets..."
-    ],
-    "answer": 0,
-    "imageURL": "",
-    "token": ""
-  },
-  {
-    "id": "6f626ae5",
-    "field": 4,
-    "domain": 0,
-    "difficulty": 0,
-    "question": "Which quotation from Walt Whitman's 'To You' most effectively illustrates the claim that readers haven't fully understood themselves?",
-    "options": [
-      "You have not known what you are, you have slumber'd upon yourself all your life...",
-      "These immense meadows, these interminable rivers, you are immense and interminable as they.",
-      "I should have made my way straight to you long ago...",
-      "I will leave all and come and make the hymns of you..."
-    ],
-    "answer": 0,
-    "imageURL": "",
-    "token": ""
-  },
-  {
-    "id": "85439572",
-    "field": 4,
-    "domain": 0,
-    "difficulty": 0,
-    "question": "Which finding, if true, would most directly support Armijo's hypothesis about solar-powered chile roasting?",
-    "options": [
-      "The temperature inside the roasting drum is distributed more evenly when roasting green chiles with solar power than with propane.",
-      "Attempts to roast green chiles using 50 heliostats yields results in fewer than six minutes.",
-      "Green chile connoisseurs prefer the flavor of solar-roasted green chiles over the flavor of propane-roasted green chiles.",
-      "The skins of solar-roasted green chiles are easier to peel than the skins of propane-roasted green chiles."
+      "indicated by",
+      "handmade from",
+      "represented by",
+      "collected with"
     ],
     "answer": 1,
     "imageURL": "",
     "token": ""
   },
   {
-    "id": "01989d77",
-    "field": 4,
-    "domain": 2,
+    "id": "fa014d2d",
+    "field": 40,
+    "domain": 5,
     "difficulty": 0,
-    "question": "This finding suggests that ______",
+    "passage": "The invention in 1958 of the integrated circuit (or microchip) radically altered the semiconductor industry. In fact, some historians argue that it fundamentally ______ the industry by enabling it to take advantage of mass production methods for the first time.",
+    "question": "Which choice completes the text with the most logical and precise word or phrase?",
     "options": [
-      "the presence of some kinds of underwater plants like watermilfoil helps prevent methane from escaping shallow lakes and ponds.",
-      "shallow lakes and ponds release more methane than deeper bodies of water because shallow bodies of water usually have more plants than deep bodies of water do.",
-      "shallow lakes and ponds are more likely to contain algae than to contain either watermilfoil or duckweed.",
-      "having a mix of algae, underwater plants, and floating plants is the best way to reduce the amount of methane in shallow lakes and ponds."
+      "overwhelmed",
+      "bypassed",
+      "obstructed",
+      "transformed"
+    ],
+    "answer": 3,
+    "imageURL": "",
+    "token": ""
+  },
+  {
+    "id": "264e7415",
+    "field": 44,
+    "domain": 6,
+    "difficulty": 0,
+    "passage": "While researching a topic, a student has taken the following notes: The Philadelphia and Lancaster Turnpike was a road built between 1792 and 1794. It was the first private turnpike in the United States. It connected the cities of Philadelphia and Lancaster in the state of Pennsylvania. It was sixty-two miles long.",
+    "question": "The student wants to emphasize the distance covered by the Philadelphia and Lancaster Turnpike. Which choice most effectively uses relevant information from the notes to accomplish this goal?",
+    "options": [
+      "The sixty-two-mile-long Philadelphia and Lancaster Turnpike connected the Pennsylvania cities of Philadelphia and Lancaster.",
+      "The Philadelphia and Lancaster Turnpike was the first private turnpike in the United States.",
+      "The Philadelphia and Lancaster Turnpike, which connected two Pennsylvania cities, was built between 1792 and 1794.",
+      "A historic Pennsylvania road, the Philadelphia and Lancaster Turnpike was completed in 1794."
     ],
     "answer": 0,
     "imageURL": "",
     "token": ""
   },
   {
-    "id": "4603d1f7",
-    "field": 4,
-    "domain": 2,
+    "id": "e3bbf2bf",
+    "field": 44,
+    "domain": 6,
     "difficulty": 0,
-    "question": "Which choice most logically completes the text about 'pay as you wish' music pricing?",
+    "passage": "While researching a topic, a student has taken the following notes: In World War I, US soldiers who were members of the Choctaw Nation in Oklahoma participated in the Choctaw Code Talkers program. The Choctaw Code Talkers were trained to relay coded military information in their native language. In World War II, the US Army recruited Navajo (Diné) soldiers to transmit coded messages in their native language. These soldiers were known as the Navajo Code Talkers.",
+    "question": "The student wants to emphasize a similarity between the Choctaw Code Talkers and the Navajo Code Talkers. Which choice most effectively uses relevant information from the notes to accomplish this goal?",
     "options": [
-      "prove financially successful for some musicians but disappointing for others.",
-      "hold greater financial appeal for bands than for individual musicians.",
-      "cause most musicians who use the model to lower the suggested prices of their songs and albums over time.",
-      "more strongly reflect differences in certain musicians' popularity than traditional pricing models do."
-    ],
-    "answer": 0,
-    "imageURL": "",
-    "token": ""
-  },
-  {
-    "id": "20000f5f",
-    "field": 4,
-    "domain": 2,
-    "difficulty": 0,
-    "question": "Which choice most logically completes the text about Sherlock Holmes adaptations?",
-    "options": [
-      "Doyle's original stories will become hard to find.",
-      "people will become more interested in detective stories than they were in the 1800s.",
-      "producing adaptations will become easier and less expensive.",
-      "the former copyright holders of Doyle's estate will return fees they collected."
+      "US soldiers who were members of the Choctaw Nation in Oklahoma used their native language to relay coded information.",
+      "In World War II, one group of Navajo (Diné) soldiers was known as the Navajo Code Talkers.",
+      "Both the Choctaw Code Talkers and the Navajo Code Talkers transmitted coded military messages in the soldiers’ native languages.",
+      "The Choctaw Code Talkers, not the Navajo Code Talkers, served in World War I."
     ],
     "answer": 2,
     "imageURL": "",
     "token": ""
   },
   {
-    "id": "6bc0e595",
-    "field": 4,
-    "domain": 2,
+    "id": "de55ec71",
+    "field": 46,
+    "domain": 7,
     "difficulty": 0,
-    "question": "This finding suggests that ______",
+    "passage": "Generations of mystery and horror ______ have been influenced by the dark, gothic stories of celebrated American author Edgar Allan Poe (1809–1849).",
+    "question": "Which choice completes the text so that it conforms to the conventions of Standard English?",
     "options": [
-      "people who mainly shop online probably spend more money every month than people who mainly shop in person do.",
-      "in-person shopping may make products seem more valuable than they seem if only viewed online.",
-      "retailers with in-person and online stores should charge the same price for a given product in both places.",
-      "online retailers may be able to raise the prices they charge for products that are only available online."
+      "writers",
+      "writers,",
+      "writers—",
+      "writers;"
     ],
-    "answer": 1,
+    "answer": 0,
     "imageURL": "",
     "token": ""
   },
   {
-    "id": "c4d43991",
-    "field": 4,
-    "domain": 2,
+    "id": "4b0c7b62",
+    "field": 46,
+    "domain": 7,
     "difficulty": 0,
-    "question": "Which choice most logically completes the text about Shang dynasty bronze artifacts?",
+    "passage": "The algaita is a double reed wind instrument from West Africa. The reed of a wind instrument is the mouthpiece ______ A double reed contains two pieces of cane that vibrate and produce sound as air passes between them.",
+    "question": "Which choice completes the text so that it conforms to the conventions of Standard English?",
     "options": [
-      "Shang dynasty bronze pieces are rare and therefore more valuable than those from other time periods.",
-      "the source of some of the raw materials used to make bronze was exploited only until the end of the Shang dynasty.",
-      "bronze was used for a short time during the Shang dynasty before different metals were used to make artifacts.",
-      "methods used to analyze bronze artifacts are not useful on pieces that are dated after the Shang dynasty."
+      "where sound is made?",
+      "where is sound made.",
+      "where sound is made.",
+      "where is sound made?"
     ],
-    "answer": 1,
+    "answer": 2,
     "imageURL": "",
     "token": ""
   }

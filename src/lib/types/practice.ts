@@ -7,17 +7,18 @@ export interface Question {
   domain: number;
   difficulty: QuestionDifficulty;
   question: string;
-  options: string[];
-  answer: number;
+  options: string[] | string;
+  answer: number | string;
   imageURL?: string;
   token?: string;
+  passage?: string;
 }
 
 export type PracticeSessionDuration = 5 | 10 | 15 | 20 | 30 | 60;
 
 export interface UserAnswer {
   questionId: string;
-  answer: number;
+  answer: number | string;
   isCorrect: boolean;
   timeSpent: number;
 }

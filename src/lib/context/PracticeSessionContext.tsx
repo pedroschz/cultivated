@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { PracticeSessionState, PracticeSession, Question, PracticeSessionDuration } from '../types/practice';
 import { collection, getDocs, getFirestore, doc, updateDoc, arrayUnion, increment, getDoc, serverTimestamp } from 'firebase/firestore';
 import { app, auth } from '../firebaseClient';
@@ -7,7 +7,7 @@ import { FirebaseApp } from 'firebase/app';
 type Action =
   | { type: 'START_SESSION'; payload: { duration: PracticeSessionDuration; questions: Question[] } }
   | { type: 'UPDATE_TIME'; payload: number }
-  | { type: 'ANSWER_QUESTION'; payload: { questionId: string; answer: number; isCorrect: boolean; timeSpent: number; domain?: string } }
+  | { type: 'ANSWER_QUESTION'; payload: { questionId: string; answer: number | string; isCorrect: boolean; timeSpent: number; domain?: string } }
   | { type: 'NEXT_QUESTION' }
   | { type: 'COMPLETE_SESSION' }
   | { type: 'SHOW_RESULTS' }
@@ -148,7 +148,7 @@ async function updateUserStats(
   }
 }
 
-async function updateUserHistory(session: PracticeSession, currentAnswer: { questionId: string; answer: number; isCorrect: boolean; timeSpent: number }) {
+async function updateUserHistory(session: PracticeSession, currentAnswer: { questionId: string; answer: number | string; isCorrect: boolean; timeSpent: number }) {
   if (!app || !auth?.currentUser) return;
   
   const db = getFirestore(app as FirebaseApp);
@@ -397,7 +397,38 @@ const PracticeSessionContext = createContext<{
 } | null>(null);
 
 export function PracticeSessionProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(practiceSessionReducer, loadInitialState());
+  const [state, dispatch] = useReducer(practiceSessionReducer, initialState);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load from localStorage after hydration to prevent SSR mismatch
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem('practiceSessionState');
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          // Ensure the session is still valid
+          if (parsed.session && parsed.session.endTime > Date.now()) {
+            // Replace the entire state with the parsed state
+            dispatch({ 
+              type: 'START_SESSION', 
+              payload: { 
+                duration: parsed.session.duration, 
+                questions: parsed.session.questions 
+              } 
+            });
+            // Manually update other properties that can't be set via START_SESSION
+            setTimeout(() => {
+              dispatch({ type: 'UPDATE_TIME', payload: Math.max(0, Math.floor((parsed.session.endTime - Date.now()) / 1000)) });
+            }, 0);
+          }
+        } catch (e) {
+          console.error('Error parsing saved session state:', e);
+        }
+      }
+      setIsHydrated(true);
+    }
+  }, []);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
