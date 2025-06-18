@@ -108,6 +108,7 @@ interface StatsData {
 
 function DashboardContent() {
   const [userName, setUserName] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,15 +124,18 @@ function DashboardContent() {
   useEffect(() => {
     if (!auth) {
       setUserName("Valued User");
+      setUser(null);
       setIsLoading(false);
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
-      if (user) {
-        setUserName(user.displayName || "Valued User");
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
+      if (currentUser) {
+        setUserName(currentUser.displayName || "Valued User");
+        setUser(currentUser);
       } else {
         setUserName("Valued User");
+        setUser(null);
       }
       setIsLoading(false);
     });
@@ -146,23 +150,29 @@ function DashboardContent() {
     }
   }, [state.session, router]);
 
+  // Fetch user stats whenever user changes
   useEffect(() => {
     async function fetchUserStats() {
-      if (!auth?.currentUser || !app) {
+      if (!user || !app) {
+        console.log('No user or app available, skipping stats fetch');
         return;
       }
       
+      console.log('Fetching stats for user:', user.uid);
       const db = getFirestore(app);
-      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const userRef = doc(db, 'users', user.uid);
       
       try {
         const userDoc = await getDoc(userRef);
         if (!userDoc.exists()) {
+          console.log('User document does not exist');
           return;
         }
         
         const userData = userDoc.data();
         const stats = userData.stats as StatsData || {};
+        
+        console.log('User stats data:', stats);
         
         // Calculate total time spent
         const totalTimeSpent = Object.values(stats.math || {}).reduce((total: number, field: FieldData) => {
@@ -222,13 +232,16 @@ function DashboardContent() {
         const totalAnswered = Object.values(domainAccuracies).reduce((sum, data) => sum + data.total, 0);
         const averageAccuracy = totalAnswered > 0 ? (totalCorrect / totalAnswered) * 100 : 0;
 
-        setUserStats({
+        const calculatedStats = {
           totalTimeSpent: Math.floor(totalTimeSpent / 60),
           totalQuestionsAnswered,
           strengths,
           weaknesses,
           averageAccuracy
-        });
+        };
+
+        console.log('Calculated stats:', calculatedStats);
+        setUserStats(calculatedStats);
 
       } catch (error) {
         console.error('Error fetching user stats:', error);
@@ -237,12 +250,12 @@ function DashboardContent() {
     }
 
     async function checkPremiumStatus() {
-      if (!auth?.currentUser || !app) {
+      if (!user || !app) {
         return;
       }
       
       const db = getFirestore(app);
-      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const userRef = doc(db, 'users', user.uid);
       
       try {
         const userDoc = await getDoc(userRef);
@@ -255,9 +268,11 @@ function DashboardContent() {
       }
     }
 
-    fetchUserStats();
-    checkPremiumStatus();
-  }, []);
+    if (user) {
+      fetchUserStats();
+      checkPremiumStatus();
+    }
+  }, [user]);
 
   const startPracticeSession = (duration: PracticeSessionDuration) => {
     dispatch({
@@ -272,11 +287,11 @@ function DashboardContent() {
   };
 
   const handleResetHistory = async () => {
-    if (!auth?.currentUser || !app) return;
+    if (!user || !app) return;
 
     try {
       const db = getFirestore(app);
-      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const userRef = doc(db, 'users', user.uid);
       
       await updateDoc(userRef, {
         stats: {}
@@ -312,141 +327,144 @@ function DashboardContent() {
   const performanceLevel = hasStats ? getPerformanceLevel(userStats.averageAccuracy) : null;
 
   return (
-    <MainLayout breadcrumbs={[{ label: 'Dashboard' }]}>
-      <div className="space-y-8">
-        {/* Welcome Header - Simplified without top buttons */}
-        <PageHeader 
-          title={`Welcome back, ${userName}!`}
-          description="Track your progress, start practice sessions, and achieve your SAT goals."
-        />
-
-        {/* Quick Start Section - Limited to 10 and 20 minutes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Start Practice Session
-            </CardTitle>
-            <CardDescription>
-              Choose your practice duration and begin improving your SAT scores
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 max-w-md">
-              {PRACTICE_DURATIONS.map((duration) => (
-                <Button
-                  key={duration}
-                  variant="outline"
-                  onClick={() => startPracticeSession(duration)}
-                  className="h-20 flex flex-col gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
-                >
-                  <Clock className="h-5 w-5" />
-                  <span className="font-semibold text-lg">{duration} min</span>
-                </Button>
-              ))}
+    <MainLayout maxWidth="full">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-7xl mx-auto">
+        {/* Left Column - Welcome and Practice */}
+        <div className="space-y-8">
+          {/* Breadcrumb */}
+          <div className="mb-6">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <span>Home</span>
+              <span>&gt;</span>
+              <span className="text-foreground font-medium">Dashboard</span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Overview Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Overview</h2>
-            {hasStats && (
-              <Badge variant={performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'}>
-                {performanceLevel?.label}
-              </Badge>
+          {/* Welcome Header */}
+          <PageHeader 
+            title={`Welcome back, ${userName}!`}
+            description="Track your progress, start practice sessions, and achieve your SAT goals."
+          />
+
+          {/* Quick Start Section - Limited to 10 and 20 minutes */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Start Practice Session
+              </CardTitle>
+              <CardDescription>
+                Choose your practice duration and begin improving your SAT scores
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                {PRACTICE_DURATIONS.map((duration) => (
+                  <Button
+                    key={duration}
+                    variant="outline"
+                    onClick={() => startPracticeSession(duration)}
+                    className="h-20 flex flex-col gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    <Clock className="h-5 w-5" />
+                    <span className="font-semibold text-lg">{duration} min</span>
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Overview Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Overview</h2>
+              {hasStats && (
+                <Badge variant={performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'}>
+                  {performanceLevel?.label}
+                </Badge>
+              )}
+            </div>
+
+            {!hasStats ? (
+              <EmptyState
+                icon={BookOpen}
+                title="Start your SAT journey!"
+                description="Complete your first practice session to see detailed statistics and track your progress over time."
+                action={{
+                  label: "Start Practice Session",
+                  onClick: () => startPracticeSession(10)
+                }}
+              />
+            ) : (
+              <div className="space-y-6">
+                {/* Key Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <StatCard
+                    title="Overall Accuracy"
+                    value={`${userStats.averageAccuracy.toFixed(1)}%`}
+                    icon={Target}
+                    trend={{
+                      value: userStats.averageAccuracy >= 75 ? 5 : -2,
+                      label: "vs target"
+                    }}
+                    badge={{
+                      text: performanceLevel?.label || "Getting Started",
+                      variant: performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'
+                    }}
+                  />
+                  
+                  <TimeCard 
+                    minutes={userStats.totalTimeSpent}
+                    label="Study Time"
+                    showHours={true}
+                  />
+                  
+                  <StatCard
+                    title="Math Questions"
+                    value={userStats.totalQuestionsAnswered.math}
+                    description={`${Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}% of total`}
+                    icon={Calculator}
+                  />
+                  
+                  <StatCard
+                    title="Reading & Writing"
+                    value={userStats.totalQuestionsAnswered.readingAndWriting}
+                    description={`${Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}% of total`}
+                    icon={BookText}
+                  />
+                </div>
+
+                {/* Progress Visualization */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Subject Balance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span>Math ({userStats.totalQuestionsAnswered.math} questions)</span>
+                        <span>{Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}%</span>
+                      </div>
+                      <Progress value={(userStats.totalQuestionsAnswered.math / totalQuestions) * 100} />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span>Reading & Writing ({userStats.totalQuestionsAnswered.readingAndWriting} questions)</span>
+                        <span>{Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}%</span>
+                      </div>
+                      <Progress value={(userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
 
-          {!hasStats ? (
-            <EmptyState
-              icon={BookOpen}
-              title="Start your SAT journey!"
-              description="Complete your first practice session to see detailed statistics and track your progress over time."
-              action={{
-                label: "Start Practice Session",
-                onClick: () => startPracticeSession(10)
-              }}
-            />
-          ) : (
-            <div className="space-y-6">
-              {/* Key Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                  title="Overall Accuracy"
-                  value={`${userStats.averageAccuracy.toFixed(1)}%`}
-                  icon={Target}
-                  trend={{
-                    value: userStats.averageAccuracy >= 75 ? 5 : -2,
-                    label: "vs target"
-                  }}
-                  badge={{
-                    text: performanceLevel?.label || "Getting Started",
-                    variant: performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'
-                  }}
-                />
-                
-                <TimeCard 
-                  minutes={userStats.totalTimeSpent}
-                  label="Study Time"
-                  showHours={true}
-                />
-                
-                <StatCard
-                  title="Math Questions"
-                  value={userStats.totalQuestionsAnswered.math}
-                  description={`${Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}% of total`}
-                  icon={Calculator}
-                />
-                
-                <StatCard
-                  title="Reading & Writing"
-                  value={userStats.totalQuestionsAnswered.readingAndWriting}
-                  description={`${Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}% of total`}
-                  icon={BookText}
-                />
-              </div>
-
-              {/* Progress Visualization */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Subject Balance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span>Math ({userStats.totalQuestionsAnswered.math} questions)</span>
-                      <span>{Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}%</span>
-                    </div>
-                    <Progress value={(userStats.totalQuestionsAnswered.math / totalQuestions) * 100} />
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span>Reading & Writing ({userStats.totalQuestionsAnswered.readingAndWriting} questions)</span>
-                      <span>{Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}%</span>
-                    </div>
-                    <Progress value={(userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-
-        {/* Skill Mastery Section - No longer in tabs */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Skill Mastery</h2>
-          <SkillMastery />
-        </div>
-
-        {/* Premium Features */}
-        {isPremium && (
-          <>
-            <Separator />
+          {/* Premium Features */}
+          {isPremium && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -483,8 +501,17 @@ function DashboardContent() {
                 </AlertDialog>
               </CardContent>
             </Card>
-          </>
-        )}
+          )}
+        </div>
+
+        {/* Right Column - Skills Only */}
+        <div className="space-y-8">
+          {/* Skill Mastery Section */}
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Skill Mastery</h2>
+            <SkillMastery />
+          </div>
+        </div>
       </div>
     </MainLayout>
   );

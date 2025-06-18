@@ -6,14 +6,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebaseClient";
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -23,21 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
-  BookOpen,
   ChartBar,
   User as UserIcon,
   LogOut,
   Settings,
-  Menu,
-  Trophy,
-  Target,
-  Brain,
-  Calculator,
-  BookText,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,47 +27,10 @@ interface HeaderProps {
   className?: string;
 }
 
-const navigationItems = [
-  {
-    title: "Practice",
-    href: "/practice",
-    description: "Start practice sessions",
-    icon: BookOpen,
-  },
-  {
-    title: "Dashboard",
-    href: "/dashboard", 
-    description: "View your progress",
-    icon: ChartBar,
-  },
-];
-
-const practiceCategories = [
-  {
-    title: "Math",
-    items: [
-      { name: "Algebra", icon: Calculator, href: "/practice?domain=algebra" },
-      { name: "Problem Solving", icon: Brain, href: "/practice?domain=problem-solving" },
-      { name: "Advanced Math", icon: Zap, href: "/practice?domain=advanced-math" },
-      { name: "Geometry", icon: Target, href: "/practice?domain=geometry" },
-    ]
-  },
-  {
-    title: "Reading & Writing", 
-    items: [
-      { name: "Information & Ideas", icon: BookText, href: "/practice?domain=information" },
-      { name: "Craft & Structure", icon: BookOpen, href: "/practice?domain=craft" },
-      { name: "Expression of Ideas", icon: Brain, href: "/practice?domain=expression" },
-      { name: "Standard English", icon: BookText, href: "/practice?domain=english" },
-    ]
-  }
-];
-
 export function Header({ className }: HeaderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     if (!auth) {
@@ -127,78 +72,29 @@ export function Header({ className }: HeaderProps) {
   return (
     <header className={cn("sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60", className)}>
       <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <div className="rounded-lg bg-primary p-2">
-            <Trophy className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="font-bold text-xl">Cultivated</span>
-        </Link>
+        {/* Left spacer */}
+        <div className="flex items-center w-32"></div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-6">
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger>Practice</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="grid gap-6 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-2">
-                    {practiceCategories.map((category) => (
-                      <div key={category.title}>
-                        <h4 className="mb-3 text-sm font-semibold text-muted-foreground">
-                          {category.title}
-                        </h4>
-                        <div className="space-y-2">
-                          {category.items.map((item) => (
-                            <NavigationMenuLink key={item.name} asChild>
-                              <Link
-                                href={item.href}
-                                className="flex items-center space-x-2 rounded-md p-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                              >
-                                <item.icon className="h-4 w-4" />
-                                <span>{item.name}</span>
-                              </Link>
-                            </NavigationMenuLink>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-
-              {navigationItems.slice(1).map((item) => (
-                <NavigationMenuItem key={item.href}>
-                  <NavigationMenuLink asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
-                        pathname === item.href && "bg-accent text-accent-foreground"
-                      )}
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {item.title}
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              ))}
-            </NavigationMenuList>
-          </NavigationMenu>
+        {/* CultivatED Title - Centered */}
+        <div className="flex items-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            CultivatED
+          </h1>
         </div>
 
-        {/* User Menu / Auth */}
+        {/* Profile Menu */}
         <div className="flex items-center space-x-4">
           {isLoading ? (
             <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="flex items-center space-x-2 h-auto px-3 py-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.photoURL || ""} alt={user.displayName || ""} />
                     <AvatarFallback>{getUserInitials(user)}</AvatarFallback>
                   </Avatar>
+                  <span className="text-sm font-medium">Profile</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -248,56 +144,6 @@ export function Header({ className }: HeaderProps) {
               </Button>
             </div>
           )}
-
-          {/* Mobile Menu */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80">
-              <div className="mt-6 space-y-6">
-                <div>
-                  <h4 className="mb-4 text-sm font-semibold">Practice Categories</h4>
-                  <div className="space-y-4">
-                    {practiceCategories.map((category) => (
-                      <div key={category.title}>
-                        <h5 className="mb-2 text-sm font-medium text-muted-foreground">
-                          {category.title}
-                        </h5>
-                        <div className="space-y-1">
-                          {category.items.map((item) => (
-                            <Link
-                              key={item.name}
-                              href={item.href}
-                              className="flex items-center space-x-2 rounded-md p-2 text-sm hover:bg-accent transition-colors"
-                            >
-                              <item.icon className="h-4 w-4" />
-                              <span>{item.name}</span>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  {navigationItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="flex items-center space-x-2 rounded-md p-2 text-sm hover:bg-accent transition-colors"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
         </div>
       </div>
     </header>

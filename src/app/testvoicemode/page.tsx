@@ -221,8 +221,9 @@ export default function TestVoiceMode() {
         throw new Error('Failed to initialize audio');
       }
 
-      // Dynamic import of the Google GenAI SDK
-      const { GoogleGenAI, Modality } = await import('@google/genai');
+      // Dynamic import of the Google GenAI SDK with proper ES module handling
+      const GoogleGenAIModule = await import('@google/genai');
+      const { GoogleGenAI, Modality } = GoogleGenAIModule;
       
       const ai = new GoogleGenAI({ apiKey });
       
@@ -410,8 +411,9 @@ Start by saying something like "I listened to your thinking process, and I can s
         throw new Error('Failed to initialize audio');
       }
 
-      // Dynamic import of the Google GenAI SDK
-      const { GoogleGenAI, Modality } = await import('@google/genai');
+      // Dynamic import of the Google GenAI SDK with proper ES module handling
+      const GoogleGenAIModule = await import('@google/genai');
+      const { GoogleGenAI, Modality } = GoogleGenAIModule;
       
       const ai = new GoogleGenAI({ apiKey });
       

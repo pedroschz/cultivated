@@ -12,41 +12,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { 
-  Brain,
-  TrendingUp,
-  Target,
-  Award,
-  BookOpen,
-  Calculator,
-  BarChart3,
   ChevronDown,
   ChevronRight,
-  Star,
-  Flame,
-  Trophy,
-  Clock,
-  Zap
 } from 'lucide-react';
 import { DOMAIN_NAMES, SUBDOMAIN_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -71,32 +46,14 @@ interface DomainSummary {
     subdomainName: string;
     score: SubdomainScore;
   }>;
-  icon: React.ElementType;
-  color: string;
-  gradient: string;
 }
 
-const DOMAIN_CONFIG = {
-  'math': {
-    '0': { icon: Calculator, color: 'blue', gradient: 'from-blue-500 to-blue-600' },
-    '1': { icon: BarChart3, color: 'green', gradient: 'from-green-500 to-green-600' },
-    '2': { icon: Brain, color: 'purple', gradient: 'from-purple-500 to-purple-600' },
-    '3': { icon: Target, color: 'orange', gradient: 'from-orange-500 to-orange-600' },
-  },
-  'readingAndWriting': {
-    '4': { icon: BookOpen, color: 'pink', gradient: 'from-pink-500 to-pink-600' },
-    '5': { icon: Award, color: 'indigo', gradient: 'from-indigo-500 to-indigo-600' },
-    '6': { icon: TrendingUp, color: 'teal', gradient: 'from-teal-500 to-teal-600' },
-    '7': { icon: Star, color: 'amber', gradient: 'from-amber-500 to-amber-600' },
-  }
-};
-
 const getMasteryLevel = (score: number) => {
-  if (score >= 90) return { label: 'Master', color: 'text-emerald-600', bg: 'bg-emerald-100', icon: Trophy };
-  if (score >= 75) return { label: 'Advanced', color: 'text-blue-600', bg: 'bg-blue-100', icon: Star };
-  if (score >= 60) return { label: 'Proficient', color: 'text-orange-600', bg: 'bg-orange-100', icon: Target };
-  if (score >= 40) return { label: 'Developing', color: 'text-yellow-600', bg: 'bg-yellow-100', icon: TrendingUp };
-  return { label: 'Beginner', color: 'text-red-600', bg: 'bg-red-100', icon: BookOpen };
+  if (score >= 90) return { label: 'Master', color: 'text-emerald-600', bg: 'bg-emerald-100' };
+  if (score >= 75) return { label: 'Advanced', color: 'text-blue-600', bg: 'bg-blue-100' };
+  if (score >= 60) return { label: 'Proficient', color: 'text-orange-600', bg: 'bg-orange-100' };
+  if (score >= 40) return { label: 'Developing', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+  return { label: 'Beginner', color: 'text-red-600', bg: 'bg-red-100' };
 };
 
 const getProgressColor = (score: number) => {
@@ -111,7 +68,6 @@ export function SkillMastery() {
   const [domainData, setDomainData] = useState<DomainSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
-  const [selectedView, setSelectedView] = useState<'overview' | 'detailed'>('overview');
 
   useEffect(() => {
     async function fetchSkillData() {
@@ -187,31 +143,16 @@ export function SkillMastery() {
         }
       }
 
-      // Get domain configuration
-      const isMath = domainId <= 3;
-      let config: { icon: React.ElementType; color: string; gradient: string };
-      
-      if (isMath) {
-        config = DOMAIN_CONFIG.math[domainId.toString() as keyof typeof DOMAIN_CONFIG.math];
-      } else {
-        config = DOMAIN_CONFIG.readingAndWriting[domainId.toString() as keyof typeof DOMAIN_CONFIG.readingAndWriting];
-      }
-
       domains.push({
         domainId: domainId.toString(),
         domainName: DOMAIN_NAMES[domainId.toString()] || `Domain ${domainId}`,
         averageCompetency: subdomainCount > 0 ? totalCompetency / subdomainCount : 0,
-        subdomains,
-        icon: config.icon,
-        color: config.color,
-        gradient: config.gradient
+        subdomains
       });
     }
 
     return domains;
   };
-
-
 
   const toggleDomain = (domainId: string) => {
     const newExpanded = new Set(expandedDomains);
@@ -233,7 +174,7 @@ export function SkillMastery() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <Brain className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+          <div className="h-8 w-8 animate-spin mx-auto border-2 border-muted-foreground border-t-transparent rounded-full" />
           <p className="text-muted-foreground">Loading your skill mastery data...</p>
         </div>
       </div>
@@ -242,118 +183,54 @@ export function SkillMastery() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <div className="flex items-center justify-center gap-3">
-          <div className={`p-3 rounded-full bg-gradient-to-r ${overallLevel.bg.replace('bg-', 'from-').replace('-100', '-200')} to-transparent`}>
-            <overallLevel.icon className={`h-8 w-8 ${overallLevel.color}`} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Skill Mastery Dashboard</h1>
-            <p className="text-muted-foreground">Track your competency across all SAT domains</p>
-          </div>
-        </div>
-        
-        {/* Overall Score Card */}
-        <Card className="border-2 border-dashed border-muted-foreground/20">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-3">
-              <div className="flex items-center justify-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-500" />
-                <span className="text-lg font-medium">Overall Mastery Level</span>
-              </div>
-              <div className="flex items-center justify-center gap-4">
-                <div className="text-4xl font-bold">{Math.round(overallAverage)}%</div>
-                <Badge className={cn("px-3 py-1", overallLevel.bg, overallLevel.color)}>
-                  {overallLevel.label}
-                </Badge>
-              </div>
-              <Progress 
-                value={overallAverage} 
-                className="w-full max-w-md mx-auto h-3"
-                style={{
-                  '--progress-foreground': getProgressColor(overallAverage),
-                } as React.CSSProperties}
-              />
+      {/* Overall Score Card */}
+      <Card className="border-2 border-dashed border-muted-foreground/20">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-3">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-lg font-medium">Overall Mastery Level</span>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* View Toggle */}
-      <Tabs value={selectedView} onValueChange={(value) => setSelectedView(value as 'overview' | 'detailed')}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="detailed">Detailed View</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          {/* Domain Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {domainData.map((domain) => {
-              const Icon = domain.icon;
-              const level = getMasteryLevel(domain.averageCompetency);
-              
-              return (
-                <Card key={domain.domainId} className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 hover:border-primary/20" onClick={() => toggleDomain(domain.domainId)}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className={`p-2 rounded-lg bg-gradient-to-r ${domain.gradient} text-white`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <Badge className={cn("text-xs", level.bg, level.color)}>
-                        {level.label}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg leading-tight">{domain.domainName}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold">{Math.round(domain.averageCompetency)}%</span>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="text-sm">{domain.subdomains.length} skills</span>
-                      </div>
-                    </div>
-                    <Progress 
-                      value={domain.averageCompetency} 
-                      className="h-2"
-                      style={{
-                        '--progress-foreground': getProgressColor(domain.averageCompetency),
-                      } as React.CSSProperties}
-                    />
-                  </CardContent>
-                </Card>
-              );
-            })}
+            <div className="flex items-center justify-center gap-4">
+              <div className="text-4xl font-bold">{Math.round(overallAverage)}%</div>
+              <Badge className={cn("px-3 py-1", overallLevel.bg, overallLevel.color)}>
+                {overallLevel.label}
+              </Badge>
+            </div>
+            <Progress 
+              value={overallAverage} 
+              className="w-full max-w-md mx-auto h-3"
+              style={{
+                '--progress-foreground': getProgressColor(overallAverage),
+              } as React.CSSProperties}
+            />
           </div>
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="detailed" className="space-y-6">
-          {domainData.map((domain) => {
-            const Icon = domain.icon;
+      {/* Domain Details - Single Card */}
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          {domainData.map((domain, index) => {
             const isExpanded = expandedDomains.has(domain.domainId);
+            const isLastDomain = index === domainData.length - 1;
             
             return (
-              <Card key={domain.domainId} className="overflow-hidden">
+              <div key={domain.domainId}>
                 <Collapsible 
                   open={isExpanded} 
                   onOpenChange={() => toggleDomain(domain.domainId)}
                 >
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="p-6 cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className={`p-3 rounded-lg bg-gradient-to-r ${domain.gradient} text-white`}>
-                            <Icon className="h-6 w-6" />
-                          </div>
                           <div>
-                            <CardTitle className="text-xl">{domain.domainName}</CardTitle>
-                            <CardDescription className="flex items-center gap-2">
+                            <h3 className="text-xl font-semibold">{domain.domainName}</h3>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2">
                               <span>{domain.subdomains.length} subdomains</span>
                               <span>•</span>
                               <span>{Math.round(domain.averageCompetency)}% mastery</span>
-                            </CardDescription>
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -363,11 +240,11 @@ export function SkillMastery() {
                           {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </div>
                       </div>
-                    </CardHeader>
+                    </div>
                   </CollapsibleTrigger>
                   
                   <CollapsibleContent>
-                    <CardContent className="pt-0">
+                    <div className="px-6 pb-6">
                       <div className="space-y-3">
                         {domain.subdomains.map((subdomain) => {
                           const subLevel = getMasteryLevel(subdomain.score.competencyScore);
@@ -383,34 +260,15 @@ export function SkillMastery() {
                                     <span>•</span>
                                     <span>{Math.round((subdomain.score.correctCount / subdomain.score.totalAttempts) * 100)}% accuracy</span>
                                     <span>•</span>
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {daysSinceLastPractice}d ago
-                                    </span>
+                                    <span>{daysSinceLastPractice}d ago</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger>
-                                        <div className="flex items-center gap-1">
-                                          {subdomain.score.recentStreak > 0 ? (
-                                            <Flame className="h-4 w-4 text-orange-500" />
-                                          ) : subdomain.score.recentStreak < -1 ? (
-                                            <TrendingUp className="h-4 w-4 text-red-500 rotate-180" />
-                                          ) : (
-                                            <Zap className="h-4 w-4 text-gray-400" />
-                                          )}
-                                          <span className="text-sm font-medium">
-                                            {subdomain.score.recentStreak > 0 ? `+${subdomain.score.recentStreak}` : subdomain.score.recentStreak}
-                                          </span>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Recent streak: {subdomain.score.recentStreak} questions</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-sm font-medium">
+                                      {subdomain.score.recentStreak > 0 ? `+${subdomain.score.recentStreak}` : subdomain.score.recentStreak}
+                                    </span>
+                                  </div>
                                   
                                   <Badge className={cn("text-xs", subLevel.bg, subLevel.color)}>
                                     {Math.round(subdomain.score.competencyScore)}%
@@ -447,14 +305,19 @@ export function SkillMastery() {
                           );
                         })}
                       </div>
-                    </CardContent>
+                    </div>
                   </CollapsibleContent>
                 </Collapsible>
-              </Card>
+                
+                {/* Divider between domains */}
+                {!isLastDomain && (
+                  <div className="border-b border-border mx-6"></div>
+                )}
+              </div>
             );
           })}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 } 

@@ -24,6 +24,7 @@ export interface VoiceRecordingActions {
   resetRecording: () => void;
   clearRecording: () => void;
   requestPermission: () => Promise<boolean>;
+  autoStartForQuestion: (questionId: string) => Promise<boolean>;
 }
 
 export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions {
@@ -49,9 +50,23 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  // Check if we're on the client side
+  // Check if we're on the client side and check for existing permissions
   useEffect(() => {
     setIsClient(true);
+    
+    // Check if we already have permission
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.permissions) {
+      navigator.permissions.query({ name: 'microphone' as PermissionName }).then(result => {
+        if (result.state === 'granted') {
+          console.log('🎤 Microphone permission already granted');
+          setState(prev => ({ ...prev, hasPermission: true }));
+        } else {
+          console.log('🎤 Microphone permission not granted:', result.state);
+        }
+      }).catch(error => {
+        console.log('🎤 Could not check microphone permission:', error);
+      });
+    }
   }, []);
 
   // Clean up on unmount
@@ -154,7 +169,10 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
   }, [isClient]);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
+    console.log('🎤 Attempting to start recording...');
+    
     if (!isClient || typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      console.log('❌ Media devices not available');
       setState(prev => ({ 
         ...prev, 
         error: 'Media devices not available' 
@@ -208,12 +226,15 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
         audioBlob: null
       }));
       
+      console.log('✅ Recording started successfully');
+      
       // Start monitoring audio levels
       monitorAudioLevel();
       
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to start recording';
+      console.log('❌ Recording failed:', errorMessage);
       setState(prev => ({ ...prev, error: errorMessage }));
       if (isClient && typeof toast !== 'undefined') {
         toast.error('Failed to start recording: ' + errorMessage);
@@ -334,6 +355,19 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
     });
   }, [isClient, state.audioURL, state.hasPermission]);
 
+  // Auto-start recording for a specific question
+  const autoStartForQuestion = useCallback(async (questionId: string): Promise<boolean> => {
+    if (!isClient) return false;
+    
+    // Only auto-start if we have permission and aren't already recording
+    if (state.hasPermission && !state.isRecording) {
+      console.log(`Auto-starting recording for question: ${questionId}`);
+      return await startRecording();
+    }
+    
+    return false;
+  }, [isClient, state.hasPermission, state.isRecording, startRecording]);
+
   // Expose additional property for easier access
   const audioLevel = state.volume;
   const permissionError = state.error;
@@ -350,5 +384,6 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
     resetRecording,
     clearRecording,
     requestPermission,
+    autoStartForQuestion,
   };
 } 

@@ -51,8 +51,8 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useVoiceRecording } from '@/lib/hooks/useVoiceRecording';
-import { VoiceRecorder } from '@/components/voice/VoiceRecorder';
-import { VoiceConversation } from '@/components/voice/VoiceConversation';
+import { AutoVoiceRecorder } from '@/components/voice/AutoVoiceRecorder';
+import { CompactVoiceConversation } from '@/components/voice/CompactVoiceConversation';
 import { TutorChat } from '@/components/voice/TutorChat';
 
 function PracticeSession() {
@@ -275,6 +275,12 @@ function PracticeSession() {
 
   const handleNextQuestion = async () => {
     if (!state.session) return;
+    
+    // Close any active AI tutoring session when moving to next question
+    if (showTutorChat) {
+      setShowTutorChat(false);
+      setRecordedAudio(null);
+    }
     
     // Check if time is up
     if (state.timeRemaining <= 0) {
@@ -599,24 +605,24 @@ function PracticeSession() {
           </CardContent>
         </Card>
 
-        {/* Voice Recording Section */}
+        {/* Auto Voice Recording - Compact Bottom Right Indicator */}
         {!userAnswer && (
-          <div className="lg:max-w-md">
-            <VoiceRecorder
-              isRecording={voiceRecording.isRecording}
-              isPaused={voiceRecording.isPaused}
-              duration={voiceRecording.duration}
-              volume={voiceRecording.volume}
-              hasPermission={voiceRecording.hasPermission}
-              isRequestingPermission={voiceRecording.isRequestingPermission}
-              error={voiceRecording.error}
-              onStartRecording={voiceRecording.startRecording}
-              onStopRecording={voiceRecording.stopRecording}
-              onPauseRecording={voiceRecording.pauseRecording}
-              onResumeRecording={voiceRecording.resumeRecording}
-              onRequestPermission={voiceRecording.requestPermission}
-            />
-          </div>
+          <AutoVoiceRecorder
+            isRecording={voiceRecording.isRecording}
+            isPaused={voiceRecording.isPaused}
+            duration={voiceRecording.duration}
+            volume={voiceRecording.volume}
+            hasPermission={voiceRecording.hasPermission}
+            isRequestingPermission={voiceRecording.isRequestingPermission}
+            error={voiceRecording.error}
+            onStartRecording={voiceRecording.startRecording}
+            onStopRecording={voiceRecording.stopRecording}
+            onPauseRecording={voiceRecording.pauseRecording}
+            onResumeRecording={voiceRecording.resumeRecording}
+            onRequestPermission={voiceRecording.requestPermission}
+            autoStart={true}
+            questionId={currentQuestion?.id}
+          />
         )}
 
         {/* Main Content */}
@@ -860,8 +866,8 @@ function PracticeSession() {
         </div>
       </div>
 
-      {/* AI Tutor Chat */}
-      <VoiceConversation
+      {/* AI Tutor Chat - Compact Voice Conversation */}
+      <CompactVoiceConversation
         isOpen={showTutorChat}
         question={{
           question: currentQuestion?.question || '',
@@ -872,7 +878,6 @@ function PracticeSession() {
         userAnswer={userAnswer?.answer || ''}
         thinkingAudio={recordedAudio}
         onClose={() => setShowTutorChat(false)}
-        onContinuePractice={handleNextQuestion}
       />
     </MainLayout>
   );
