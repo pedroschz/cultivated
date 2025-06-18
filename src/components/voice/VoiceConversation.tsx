@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { cn } from '@/lib/utils';
+import { auth } from '@/lib/firebaseClient';
 import { 
   Bot, 
   Mic, 
@@ -11,14 +12,19 @@ import {
   ArrowRight,
   CheckCircle,
   Pause,
-  Play
+  Play,
+  Loader2
 } from 'lucide-react';
 
 interface VoiceConversationProps {
   isOpen: boolean;
-  questionText: string;
+  question: {
+    question: string;
+    options: string[] | string;
+    answer: number | string;
+    passage?: string;
+  };
   userAnswer: string | number;
-  correctAnswer: string | number;
   thinkingAudio: Blob | null;
   onClose: () => void;
   onContinuePractice: () => void;
@@ -27,328 +33,539 @@ interface VoiceConversationProps {
 
 export function VoiceConversation({
   isOpen,
-  questionText,
+  question,
   userAnswer,
-  correctAnswer,
   thinkingAudio,
   onClose,
   onContinuePractice,
   className
 }: VoiceConversationProps) {
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
-  const [conversationStarted, setConversationStarted] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [status, setStatus] = useState('Ready to connect');
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [userName, setUserName] = useState<string>('');
 
+  const sessionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const outputAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isStreamingRef = useRef(false);
+  const audioQueueRef = useRef<string[]>([]);
+  const isPlayingRef = useRef(false);
+  const audioAnalyserRef = useRef<AnalyserNode | null>(null);
+  const audioLevelIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if we're on the client side
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  // Get user name from auth - extract first name only
   useEffect(() => {
-    if (isClient && isOpen && !conversationStarted) {
-      initializeVoiceSession();
+    if (auth?.currentUser) {
+      const fullName = auth.currentUser.displayName || 'there';
+      const firstName = fullName.split(' ')[0];
+      setUserName(firstName);
+    } else {
+      setUserName('there');
     }
-  }, [isClient, isOpen, conversationStarted]);
+  }, []);
 
-  // Add debug logging for prop changes
+  // Start tutoring session when dialog opens
   useEffect(() => {
-    console.log('VoiceConversation props changed:', {
-      isOpen,
-      questionText: questionText.substring(0, 50) + '...',
-      userAnswer,
-      correctAnswer,
-      hasThinkingAudio: !!thinkingAudio,
-      conversationStarted,
-      isClient
-    });
-  }, [isOpen, questionText, userAnswer, correctAnswer, thinkingAudio, conversationStarted, isClient]);
+    if (isClient && isOpen && !isConnected) {
+      startTutoringSession();
+    }
+  }, [isClient, isOpen, isConnected]);
 
+  // Cleanup on unmount or close
   useEffect(() => {
-    // Cleanup on unmount or close
     return () => {
-      if (isClient && audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-      if (isClient && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
+      cleanup();
     };
-  }, [isClient]);
+  }, []);
 
-  const initializeVoiceSession = async () => {
-    if (!isClient) return;
-    
-    setIsInitializing(true);
-    
+  const cleanup = () => {
     try {
-      // Start the Gemini voice session with context
-      const response = await fetch('/api/voice/start-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questionText,
-          userAnswer,
-          correctAnswer,
-          thinkingAudio: thinkingAudio ? await audioToBase64(thinkingAudio) : null
-        })
-      });
-
-      if (response.ok) {
-        setConversationStarted(true);
-        console.log('Voice session started successfully');
-        
-        // For now, directly use fallback since we don't have real Gemini Live API
-        // In production, this would start listening for Gemini's audio stream
-        setTimeout(() => {
-          speakFallbackMessage();
-        }, 1000);
-      } else {
-        throw new Error('Failed to start voice session');
-      }
-    } catch (error) {
-      console.error('Voice session error:', error);
-      // Always use fallback message
-      setTimeout(() => {
-        speakFallbackMessage();
-      }, 500);
-      setConversationStarted(true);
-    } finally {
-      setIsInitializing(false);
-    }
-  };
-
-  const audioToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve) => {
-      if (!isClient || typeof FileReader === 'undefined') {
-        resolve('');
-        return;
+      isStreamingRef.current = false;
+      
+      // Clear audio queue and stop playback
+      audioQueueRef.current = [];
+      isPlayingRef.current = false;
+      
+      // Stop audio level monitoring
+      stopAudioLevelMonitoring();
+      
+      if (sessionRef.current) {
+        sessionRef.current.close();
+        sessionRef.current = null;
       }
       
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        resolve(base64);
-      };
-      reader.readAsDataURL(blob);
-    });
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      
+      setIsConnected(false);
+      setStatus('Disconnected');
+    } catch (error) {
+      console.error(`Error during cleanup: ${error}`);
+    }
   };
 
-  const startListeningForGeminiAudio = () => {
-    if (!isClient || typeof Audio === 'undefined') return;
+  const logMessage = (message: string) => {
+    console.log(`${new Date().toLocaleTimeString()}: ${message}`);
+  };
+
+  const startAudioLevelMonitoring = () => {
+    if (!audioAnalyserRef.current) return;
     
-    // Create audio element for playback
-    outputAudioRef.current = new Audio();
-    outputAudioRef.current.onended = () => {
-      setIsSpeaking(false);
-      // Automatically start listening for user response
-      startListening();
+    const dataArray = new Uint8Array(audioAnalyserRef.current.frequencyBinCount);
+    
+    const updateAudioLevel = () => {
+      if (!audioAnalyserRef.current) return;
+      
+      audioAnalyserRef.current.getByteFrequencyData(dataArray);
+      const level = Math.max(...dataArray);
+      const normalizedLevel = (level / 255) * 100;
+      
+      setAudioLevel(normalizedLevel);
+      setIsSpeaking(normalizedLevel > 5); // Consider speaking if level > 5%
     };
-
-    // Start receiving audio stream from WebSocket
-    if (typeof WebSocket !== 'undefined') {
-      try {
-        const ws = new WebSocket(`ws://localhost:3000/api/voice/stream`);
-        
-        ws.onmessage = (event) => {
-          const audioData = JSON.parse(event.data);
-          if (audioData.audio) {
-            playGeminiAudio(audioData.audio);
-          }
-        };
-
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          setIsSpeaking(false);
-        };
-      } catch (error) {
-        console.error('WebSocket connection failed:', error);
-      }
-    }
-  };
-
-  const playGeminiAudio = (base64Audio: string) => {
-    if (!isClient || !outputAudioRef.current || typeof URL === 'undefined') return;
     
-    try {
-      const audioBlob = base64ToBlob(base64Audio, 'audio/wav');
-      const audioUrl = URL.createObjectURL(audioBlob);
-      outputAudioRef.current.src = audioUrl;
-      outputAudioRef.current.play();
-      setIsSpeaking(true);
-    } catch (error) {
-      console.error('Error playing audio:', error);
-    }
+    audioLevelIntervalRef.current = setInterval(updateAudioLevel, 50);
   };
 
-  const base64ToBlob = (base64: string, mimeType: string): Blob => {
-    if (!isClient || typeof atob === 'undefined') {
-      return new Blob();
+  const stopAudioLevelMonitoring = () => {
+    if (audioLevelIntervalRef.current) {
+      clearInterval(audioLevelIntervalRef.current);
+      audioLevelIntervalRef.current = null;
     }
-    
+    setAudioLevel(0);
+    setIsSpeaking(false);
+  };
+
+  const initializeAudio = async () => {
     try {
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      if (!isClient) return null;
+
+      // Initialize AudioContext for processing
+      audioContextRef.current = new AudioContext({
+        sampleRate: 24000 // Output sample rate
+      });
+
+      logMessage('Requesting microphone access...');
+      
+      // Get microphone access with more specific constraints
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: { ideal: 16000 },
+          sampleSize: 16
+        }
+      });
+
+      // Test if microphone is working
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        throw new Error('No audio tracks found');
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      return new Blob([byteArray], { type: mimeType });
+      
+      logMessage(`Microphone access granted: ${audioTracks[0].label}`);
+      
+      // Set up live audio level monitoring
+      const source = audioContextRef.current.createMediaStreamSource(stream);
+      const analyser = audioContextRef.current.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      audioAnalyserRef.current = analyser;
+      
+      // Start continuous audio level monitoring for UI
+      startAudioLevelMonitoring();
+
+      logMessage('Audio initialized successfully');
+      return stream;
     } catch (error) {
-      console.error('Error converting base64 to blob:', error);
-      return new Blob();
+      logMessage(`Audio initialization failed: ${error}`);
+      throw error;
     }
   };
 
-  const startListening = async () => {
-    if (!isClient || typeof navigator === 'undefined' || !navigator.mediaDevices) {
-      console.error('Media devices not available');
+  const playAudioData = async (base64Data: string) => {
+    // Add to queue instead of playing immediately
+    audioQueueRef.current.push(base64Data);
+    
+    // Start processing queue if not already playing
+    if (!isPlayingRef.current) {
+      processAudioQueue();
+    }
+  };
+
+  const processAudioQueue = async () => {
+    if (isPlayingRef.current || audioQueueRef.current.length === 0) {
       return;
     }
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Set up audio level monitoring
-      if (typeof AudioContext !== 'undefined') {
-        audioContextRef.current = new AudioContext();
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        const analyser = audioContextRef.current.createAnalyser();
-        source.connect(analyser);
-        
-        monitorAudioLevel(analyser);
+
+    isPlayingRef.current = true;
+
+    while (audioQueueRef.current.length > 0) {
+      const base64Data = audioQueueRef.current.shift();
+      if (base64Data) {
+        await playAudioChunk(base64Data);
       }
-      
-      // Set up recording
-      if (typeof MediaRecorder !== 'undefined') {
-        mediaRecorderRef.current = new MediaRecorder(stream);
-        audioChunksRef.current = [];
-        
-        mediaRecorderRef.current.ondataavailable = (event) => {
-          audioChunksRef.current.push(event.data);
-        };
-        
-        mediaRecorderRef.current.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-          sendVoiceToGemini(audioBlob);
-          stream.getTracks().forEach(track => track.stop());
-        };
-        
-        mediaRecorderRef.current.start();
-        setIsListening(true);
-      }
-      
-    } catch (error) {
-      console.error('Error starting recording:', error);
     }
+
+    isPlayingRef.current = false;
   };
 
-  const stopListening = () => {
-    if (!isClient) return;
-    
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsListening(false);
-    setAudioLevel(0);
-  };
+  const playAudioChunk = async (base64Data: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!audioContextRef.current) {
+          resolve();
+          return;
+        }
 
-  const monitorAudioLevel = (analyser: AnalyserNode) => {
-    if (!isClient) return;
-    
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    
-    const updateLevel = () => {
-      analyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-      setAudioLevel(Math.min(100, (average / 255) * 100));
-      
-      if (isListening) {
-        requestAnimationFrame(updateLevel);
+        // Decode base64 to array buffer
+        const binaryString = atob(base64Data);
+        const arrayBuffer = new ArrayBuffer(binaryString.length);
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        for (let i = 0; i < binaryString.length; i++) {
+          uint8Array[i] = binaryString.charCodeAt(i);
+        }
+
+        // Convert to Int16Array (16-bit PCM)
+        const int16Array = new Int16Array(arrayBuffer);
+        
+        // Create audio buffer for 24kHz output
+        const audioBuffer = audioContextRef.current.createBuffer(1, int16Array.length, 24000);
+        const channelData = audioBuffer.getChannelData(0);
+        
+        // Convert Int16 to Float32 and copy to audio buffer
+        for (let i = 0; i < int16Array.length; i++) {
+          channelData[i] = int16Array[i] / 32768.0;
+        }
+
+        // Play the audio
+        const source = audioContextRef.current.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContextRef.current.destination);
+        
+        // Resolve when audio finishes playing
+        source.onended = () => resolve();
+        
+        source.start();
+      } catch (error) {
+        logMessage(`Audio playback error: ${error}`);
+        reject(error);
       }
-    };
-    
-    updateLevel();
+    });
   };
 
-  const sendVoiceToGemini = async (audioBlob: Blob) => {
-    if (!isClient) return;
+  // Helper function to convert Blob to PCM format
+  const convertBlobToPCM = async (audioBlob: Blob): Promise<string> => {
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioContext = new AudioContext({ sampleRate: 16000 });
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     
+    // Convert to 16-bit PCM
+    const pcmData = new Int16Array(audioBuffer.length);
+    const channelData = audioBuffer.getChannelData(0);
+    
+    for (let i = 0; i < channelData.length; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]));
+      pcmData[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+    }
+
+    // Convert to base64
+    const buffer = new ArrayBuffer(pcmData.length * 2);
+    const view = new DataView(buffer);
+    for (let i = 0; i < pcmData.length; i++) {
+      view.setInt16(i * 2, pcmData[i], true); // little-endian
+    }
+    
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+  };
+
+  const startTutoringSession = async () => {
     try {
-      const base64Audio = await audioToBase64(audioBlob);
+      setStatus('Starting tutoring session...');
+      logMessage('Starting tutoring session with context...');
+
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('Gemini API key not found');
+      }
+
+      // Initialize audio
+      const stream = await initializeAudio();
+      if (!stream) {
+        throw new Error('Failed to initialize audio');
+      }
+
+      // Dynamic import of the Google GenAI SDK
+      const { GoogleGenAI, Modality } = await import('@google/genai');
       
-      const response = await fetch('/api/voice/send-audio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio: base64Audio })
+      const ai = new GoogleGenAI({ apiKey });
+      
+      // Create tutoring-specific system instruction with user's name and complete context
+      const optionsText = Array.isArray(question.options) 
+        ? question.options.map((opt, idx) => `${String.fromCharCode(65 + idx)}) ${opt}`).join('\n')
+        : question.options;
+      
+      // Convert user answer to letter format if it's a number (multiple choice)
+      const userAnswerDisplay = Array.isArray(question.options) && typeof userAnswer === 'number'
+        ? String.fromCharCode(65 + userAnswer) // Convert 0->A, 1->B, 2->C, 3->D
+        : userAnswer;
+      
+      // Convert correct answer to letter format if it's a number (multiple choice)  
+      const correctAnswerDisplay = Array.isArray(question.options) && typeof question.answer === 'number'
+        ? String.fromCharCode(65 + question.answer) // Convert 0->A, 1->B, 2->C, 3->D
+        : question.answer;
+      
+      const passageText = question.passage ? `\n\nReading Passage:\n${question.passage}` : '';
+      const isReadingWritingQuestion = !!question.passage; // Has passage = Reading/Writing section
+      
+      const systemInstruction = `You are an expert SAT tutor helping ${userName} who just got a question wrong.
+
+${isReadingWritingQuestion ? 'This is a READING AND WRITING question with a passage.' : 'This is a MATH question.'} 
+
+Question: ${question.question}
+${passageText}
+
+Answer Choices:
+${optionsText}
+
+Student's Answer: ${userAnswerDisplay}
+Correct Answer: ${correctAnswerDisplay}
+
+The student has just recorded their thinking process while solving this question. 
+
+IMPORTANT: You should START SPEAKING IMMEDIATELY when the session begins. Do not wait for the student to speak first.
+
+If you hear their thinking audio:
+1. Acknowledge what you heard in their thinking process
+2. Identify where their reasoning went wrong
+3. Gently guide them to the correct approach
+
+If no thinking audio is available:
+1. Immediately start by analyzing their wrong answer choice
+2. Explain why that choice might seem appealing but is incorrect
+3. Guide them through the correct approach
+
+Always:
+- Be encouraging and supportive
+- Keep responses conversational and under 30 seconds
+- Ask follow-up questions to ensure they understand
+- Address them by their first name "${userName}" naturally in conversation
+
+For Reading and Writing questions, you can mention these expert strategies when relevant:
+
+**Three-Step Method:**
+1. What is the question asking? (Read question first to focus your passage reading)
+2. What do I need to look for in the passage? (Strategic reading based on question type)
+3. What answer strategy is best? (Predict and Match OR Eliminate)
+
+**Key Reading Tips:**
+- Look for keywords that indicate: Opinion (fortunately, disappointing), Emphasis (especially, crucial), Continuation (moreover, also), Contrast (but, however), Argument (therefore, because)
+- Read passage blurbs for context
+- Use only what the excerpt provides, not outside knowledge
+- For literature: focus on characters, settings, themes, figurative language
+- Always guess if you're unsure (no penalty for wrong answers)
+
+**Answer Strategies:**
+- Predict and Match: Make your own prediction, then find matching answer choice
+- Eliminate: Rule out choices that don't directly answer based on passage info
+
+Only mention these strategies if they're relevant to the specific mistake the student made.
+
+Start immediately with something like "Hi ${userName}, I can see you chose [their answer] for this question. Let me help you understand where the confusion might be..." then proceed with your tutoring.`;
+
+      const config = {
+        responseModalities: [Modality.AUDIO],
+        systemInstruction,
+      };
+
+      logMessage('Creating Gemini Live tutoring session...');
+      
+      // Store the session reference locally for use in callbacks
+      let sessionInstance: any = null;
+      
+      // Create the session and assign it immediately
+      const session = await ai.live.connect({
+        model: 'gemini-2.0-flash-live-001',
+        config: config,
+        callbacks: {
+          onopen: async () => {
+            logMessage('Connected to Gemini Live for tutoring!');
+            setIsConnected(true);
+            setStatus('Connected - Sending context...');
+            
+            // Send the student's thinking audio as context if available
+            if (thinkingAudio) {
+              try {
+                logMessage('Converting and sending student thinking audio...');
+                const base64PCM = await convertBlobToPCM(thinkingAudio);
+                
+                await sessionInstance?.sendRealtimeInput({
+                  audio: {
+                    data: base64PCM,
+                    mimeType: "audio/pcm;rate=16000"
+                  }
+                });
+                
+                logMessage('Student thinking audio sent successfully');
+                setStatus('Context sent - Starting conversation...');
+                
+                // Give Gemini a moment to process the context, then start live conversation
+                setTimeout(() => {
+                  logMessage('Starting live audio streaming...');
+                  startContinuousAudioStreaming(stream);
+                  setStatus('Tutoring session active - Gemini is analyzing and will speak first!');
+                }, 1000);
+                
+              } catch (error) {
+                logMessage(`Error sending thinking audio: ${error}`);
+                // Still start the conversation even if context fails
+                startContinuousAudioStreaming(stream);
+                setStatus('Tutoring session active - Gemini will start speaking!');
+              }
+            } else {
+              logMessage('No thinking audio available, starting conversation directly');
+              
+              // Start live conversation immediately - Gemini will speak first
+              startContinuousAudioStreaming(stream);
+              setStatus('Tutoring session active - Gemini will start speaking!');
+            }
+          },
+          
+          onmessage: (message: any) => {
+            // Handle audio response
+            if (message.data) {
+              logMessage(`Received tutoring audio: ${message.data.length} characters`);
+              playAudioData(message.data);
+            } else {
+              logMessage(`Received tutoring message: ${JSON.stringify(message, null, 2)}`);
+            }
+            
+            if (message.setupComplete) {
+              logMessage('Tutoring setup completed successfully');
+            }
+            
+            if (message.serverContent?.interrupted) {
+              logMessage('Tutoring interrupted - clearing audio queue');
+              audioQueueRef.current = [];
+              isPlayingRef.current = false;
+            }
+            
+            if (message.serverContent?.turnComplete) {
+              logMessage('Tutor finished speaking');
+            }
+            
+            // Log any text responses
+            if (message.text) {
+              logMessage(`Tutor text: ${message.text}`);
+            }
+          },
+          
+          onerror: (error: any) => {
+            logMessage(`Tutoring connection error: ${error.message || error}`);
+            setIsConnected(false);
+            setStatus('Tutoring error occurred');
+          },
+          
+          onclose: (event: any) => {
+            logMessage(`Tutoring connection closed: ${event.reason || 'Unknown reason'}`);
+            setIsConnected(false);
+            setStatus('Tutoring session ended');
+            isStreamingRef.current = false;
+          }
+        }
       });
-      
-      if (response.ok) {
-        setIsSpeaking(true);
-      }
+
+      // Assign the session reference AFTER the connection is established
+      sessionInstance = session;
+      sessionRef.current = session;
+      logMessage(`Tutoring session assigned: sessionRef.current exists = ${!!sessionRef.current}`);
+
     } catch (error) {
-      console.error('Error sending voice:', error);
+      logMessage(`Failed to start tutoring session: ${error}`);
+      setStatus('Failed to start tutoring');
+      setIsConnected(false);
     }
   };
 
-  const interruptGemini = async () => {
-    if (!isClient) return;
-    
+  const startContinuousAudioStreaming = (stream: MediaStream) => {
     try {
-      await fetch('/api/voice/interrupt', { method: 'POST' });
+      isStreamingRef.current = true;
       
-      if (outputAudioRef.current) {
-        outputAudioRef.current.pause();
-        outputAudioRef.current.currentTime = 0;
-      }
+      logMessage('Setting up direct PCM audio streaming...');
       
-      setIsSpeaking(false);
-      startListening();
+      // Create AudioContext for direct PCM processing
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const source = audioContext.createMediaStreamSource(stream);
+      
+      // Create a ScriptProcessor node for audio processing
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      
+      let chunkCount = 0;
+      
+      processor.onaudioprocess = async (event) => {
+        if (!isStreamingRef.current || !sessionRef.current) return;
+        
+        chunkCount++;
+        const inputBuffer = event.inputBuffer;
+        const inputData = inputBuffer.getChannelData(0);
+        
+        // Convert Float32Array to Int16Array (16-bit PCM)
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const sample = Math.max(-1, Math.min(1, inputData[i]));
+          pcmData[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        }
+        
+        // Convert to base64
+        const buffer = new ArrayBuffer(pcmData.length * 2);
+        const view = new DataView(buffer);
+        for (let i = 0; i < pcmData.length; i++) {
+          view.setInt16(i * 2, pcmData[i], true); // little-endian
+        }
+        
+        const base64PCM = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        
+        try {
+          // Send real-time audio input to Gemini
+          sessionRef.current.sendRealtimeInput({
+            audio: {
+              data: base64PCM,
+              mimeType: "audio/pcm;rate=16000"
+            }
+          });
+        } catch (error) {
+          logMessage(`Audio sending error: ${error}`);
+        }
+      };
+      
+      // Connect the audio processing chain
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+      
+      logMessage('Direct PCM audio streaming started successfully');
+      
     } catch (error) {
-      console.error('Error interrupting:', error);
+      logMessage(`Failed to start audio streaming: ${error}`);
     }
   };
 
-  const speakFallbackMessage = () => {
-    if (!isClient || typeof speechSynthesis === 'undefined') return;
-    
-    const message = `I see you chose ${userAnswer}, but the correct answer is ${correctAnswer}. Let me help you understand where the confusion might be coming from. Can you tell me what made you choose that answer?`;
-    
-    const utterance = new SpeechSynthesisUtterance(message);
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 0.8;
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      startListening();
-    };
-    
-    speechSynthesis.speak(utterance);
-  };
-
-  const endConversation = async () => {
-    if (!isClient) return;
-    
-    try {
-      await fetch('/api/voice/end-session', { method: 'POST' });
-    } catch (error) {
-      console.error('Error ending session:', error);
-    }
-    
+  const endConversation = () => {
+    cleanup();
     onClose();
   };
 
-  // Don't render anything on server side
-  if (!isClient || !isOpen) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -357,16 +574,16 @@ export function VoiceConversation({
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-blue-600" />
-              AI Voice Tutor
+              AI Voice Tutor - {userName}
             </div>
             <div className="flex items-center gap-2">
-              {isSpeaking && (
+              {isPlayingRef.current && (
                 <div className="flex items-center gap-1 text-blue-600">
                   <Volume2 className="h-4 w-4" />
                   <span className="text-sm">Speaking...</span>
                 </div>
               )}
-              {isListening && (
+              {isSpeaking && (
                 <div className="flex items-center gap-1 text-green-600">
                   <Mic className="h-4 w-4" />
                   <span className="text-sm">Listening...</span>
@@ -377,34 +594,49 @@ export function VoiceConversation({
           
           {/* Question Context */}
           <div className="p-3 bg-gray-50 rounded-lg text-sm">
-            <p className="text-gray-700 line-clamp-2">{questionText}</p>
+            <p className="text-gray-700 line-clamp-2">{question.question}</p>
             <div className="flex gap-4 mt-2 text-xs">
-              <span>Your Answer: <span className="font-medium text-red-600">{userAnswer}</span></span>
-              <span>Correct Answer: <span className="font-medium text-green-600">{correctAnswer}</span></span>
+              <span>Your Answer: <span className="font-medium text-red-600">
+                {Array.isArray(question.options) && typeof userAnswer === 'number'
+                  ? String.fromCharCode(65 + userAnswer)
+                  : userAnswer}
+              </span></span>
+              <span>Correct Answer: <span className="font-medium text-green-600">
+                {Array.isArray(question.options) && typeof question.answer === 'number'
+                  ? String.fromCharCode(65 + question.answer)
+                  : question.answer}
+              </span></span>
             </div>
           </div>
         </CardHeader>
         
         <CardContent className="flex-1 flex flex-col gap-4 p-4">
+          {/* Status Display */}
+          <div className="text-center">
+            <div className="text-lg mb-2">Status: <span className="font-semibold">{status}</span></div>
+          </div>
+
           {/* Voice Activity Visualization */}
           <div className="flex-1 flex items-center justify-center">
-            {isInitializing ? (
+            {!isConnected ? (
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">Analyzing your thinking...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2">
+                  <Loader2 className="h-8 w-8" />
+                </div>
+                <p className="text-sm text-muted-foreground">Connecting to AI tutor...</p>
               </div>
             ) : (
               <div className="text-center space-y-4">
                 {/* Audio Level Indicator */}
                 <div className={cn(
                   "w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-200",
-                  isSpeaking ? "border-blue-500 bg-blue-50" : 
-                  isListening ? "border-green-500 bg-green-50" : 
+                  isPlayingRef.current ? "border-blue-500 bg-blue-50" : 
+                  isSpeaking ? "border-green-500 bg-green-50" : 
                   "border-gray-300 bg-gray-50"
                 )}>
-                  {isSpeaking ? (
+                  {isPlayingRef.current ? (
                     <Volume2 className="h-8 w-8 text-blue-600" />
-                  ) : isListening ? (
+                  ) : isSpeaking ? (
                     <Mic className="h-8 w-8 text-green-600" />
                   ) : (
                     <Bot className="h-8 w-8 text-gray-600" />
@@ -412,7 +644,7 @@ export function VoiceConversation({
                 </div>
                 
                 {/* Audio Level Bar */}
-                {isListening && (
+                {isSpeaking && (
                   <div className="w-full max-w-xs mx-auto">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
@@ -424,76 +656,39 @@ export function VoiceConversation({
                   </div>
                 )}
                 
-                <div>
-                  {isInitializing && (
-                    <p className="text-sm text-gray-600">Setting up voice conversation...</p>
-                  )}
-                  {isSpeaking && (
-                    <p className="text-sm text-blue-600">Gemini is explaining the concept</p>
-                  )}
-                  {isListening && (
-                    <p className="text-sm text-green-600">Speak naturally - ask questions or respond</p>
-                  )}
-                  {!isSpeaking && !isListening && !isInitializing && (
-                    <p className="text-sm text-gray-600">Voice conversation ready</p>
+                {/* Instructions */}
+                <div className="text-sm text-gray-600 max-w-xs mx-auto">
+                  {isConnected && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 justify-center">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>Live conversation active</span>
+                      </div>
+                      <p>The AI tutor is analyzing your work and will start explaining where you went wrong. Listen first, then respond naturally!</p>
+                    </div>
                   )}
                 </div>
               </div>
             )}
           </div>
-          
-          {/* Controls */}
-          <div className="space-y-3">
-            {conversationStarted && (
-              <div className="flex gap-2">
-                {isSpeaking ? (
-                  <Button 
-                    onClick={interruptGemini}
-                    variant="outline"
-                    className="flex-1 gap-2"
-                  >
-                    <Pause className="h-4 w-4" />
-                    Interrupt & Speak
-                  </Button>
-                ) : isListening ? (
-                  <Button 
-                    onClick={stopListening}
-                    variant="outline"
-                    className="flex-1 gap-2"
-                  >
-                    <MicOff className="h-4 w-4" />
-                    Stop Speaking
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={startListening}
-                    variant="outline"
-                    className="flex-1 gap-2"
-                  >
-                    <Mic className="h-4 w-4" />
-                    Start Speaking
-                  </Button>
-                )}
-              </div>
-            )}
-            
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <Button 
-                onClick={onContinuePractice}
-                className="flex-1 gap-2"
-              >
-                <CheckCircle className="h-4 w-4" />
-                Continue Practice
-              </Button>
-              <Button 
-                onClick={endConversation}
-                variant="outline"
-                className="gap-2"
-              >
-                End Session
-              </Button>
-            </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 mt-4">
+            <Button 
+              onClick={onContinuePractice}
+              className="flex-1 gap-2"
+              disabled={!isConnected}
+            >
+              <CheckCircle className="h-4 w-4" />
+              Continue Practice
+            </Button>
+            <Button 
+              onClick={endConversation}
+              variant="outline"
+              className="gap-2"
+            >
+              End Session
+            </Button>
           </div>
         </CardContent>
       </Card>

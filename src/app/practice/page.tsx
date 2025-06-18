@@ -863,9 +863,13 @@ function PracticeSession() {
       {/* AI Tutor Chat */}
       <VoiceConversation
         isOpen={showTutorChat}
-        questionText={currentQuestion?.question || ''}
+        question={{
+          question: currentQuestion?.question || '',
+          options: currentQuestion?.options || [],
+          answer: currentQuestion?.answer || '',
+          passage: currentQuestion?.passage
+        }}
         userAnswer={userAnswer?.answer || ''}
-        correctAnswer={currentQuestion?.answer || ''}
         thinkingAudio={recordedAudio}
         onClose={() => setShowTutorChat(false)}
         onContinuePractice={handleNextQuestion}
