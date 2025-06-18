@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, app } from '../../lib/firebaseClient';
-import { usePracticeSession, PracticeSessionProvider, fetchQuestions } from '@/lib/context/PracticeSessionContext';
+import { usePracticeSession } from '@/lib/context/PracticeSessionContext';
 import { Question, PracticeSessionDuration } from '@/lib/types/practice';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { 
@@ -31,10 +31,6 @@ import {
   AlertDialogTrigger,
   EmptyState,
   Loading,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
   Separator
 } from '@/components';
 import { 
@@ -47,13 +43,15 @@ import {
   Calculator,
   BookText,
   RotateCcw,
-  Play,
-  ChevronRight,
   Star,
   Award
 } from 'lucide-react';
-import { DOMAIN_NAMES, SUBDOMAIN_NAMES, PRACTICE_DURATIONS, PERFORMANCE_CATEGORIES } from '@/lib/constants';
+import { DOMAIN_NAMES, SUBDOMAIN_NAMES, PERFORMANCE_CATEGORIES } from '@/lib/constants';
 import { toast } from 'sonner';
+import { SkillMastery } from '@/components/SkillMastery';
+
+// Limited practice durations - only 10 and 20 minutes
+const PRACTICE_DURATIONS = [10, 20] as const;
 
 interface PracticeSessionContextType {
   state: {
@@ -118,18 +116,8 @@ function DashboardContent() {
   const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
-    async function loadQuestions() {
-      try {
-        const fetchedQuestions = await fetchQuestions();
-        setQuestions(fetchedQuestions);
-      } catch (error) {
-        console.error('Error loading questions:', error);
-        toast.error('Failed to load questions');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadQuestions();
+    // We no longer need to pre-load questions for time-based sessions
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -248,12 +236,10 @@ function DashboardContent() {
       }
     }
 
-    fetchUserStats();
-  }, []);
-
-  useEffect(() => {
     async function checkPremiumStatus() {
-      if (!auth?.currentUser || !app) return;
+      if (!auth?.currentUser || !app) {
+        return;
+      }
       
       const db = getFirestore(app);
       const userRef = doc(db, 'users', auth.currentUser.uid);
@@ -261,30 +247,27 @@ function DashboardContent() {
       try {
         const userDoc = await getDoc(userRef);
         if (userDoc.exists()) {
-          setIsPremium(userDoc.data().isPremium || false);
+          const userData = userDoc.data();
+          setIsPremium(userData.premium === true);
         }
       } catch (error) {
         console.error('Error checking premium status:', error);
       }
     }
 
+    fetchUserStats();
     checkPremiumStatus();
   }, []);
 
   const startPracticeSession = (duration: PracticeSessionDuration) => {
-    if (questions.length === 0) {
-      toast.error('No questions available. Please try again later.');
-      return;
-    }
-
     dispatch({
       type: 'START_SESSION',
       payload: {
         duration,
-        questions: questions.slice(0, Math.min(20, questions.length))
-      }
+      },
     });
-
+    toast.success(`Starting ${duration}-minute practice session!`);
+    // Navigate to practice page
     router.push('/practice');
   };
 
@@ -303,7 +286,7 @@ function DashboardContent() {
       toast.success('Practice history reset successfully');
     } catch (error) {
       console.error('Error resetting history:', error);
-      toast.error('Failed to reset history');
+      toast.error('Failed to reset practice history');
     }
   };
 
@@ -331,26 +314,13 @@ function DashboardContent() {
   return (
     <MainLayout breadcrumbs={[{ label: 'Dashboard' }]}>
       <div className="space-y-8">
-        {/* Welcome Header */}
+        {/* Welcome Header - Simplified without top buttons */}
         <PageHeader 
           title={`Welcome back, ${userName}!`}
           description="Track your progress, start practice sessions, and achieve your SAT goals."
-        >
-          <div className="flex items-center space-x-2">
-            {isPremium && (
-              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                <Star className="h-3 w-3 mr-1" />
-                Premium
-              </Badge>
-            )}
-            <Button onClick={() => startPracticeSession(15)} className="gap-2">
-              <Play className="h-4 w-4" />
-              Quick Practice
-            </Button>
-          </div>
-        </PageHeader>
+        />
 
-        {/* Quick Start Section */}
+        {/* Quick Start Section - Limited to 10 and 20 minutes */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -362,26 +332,26 @@ function DashboardContent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 gap-4 max-w-md">
               {PRACTICE_DURATIONS.map((duration) => (
                 <Button
                   key={duration}
                   variant="outline"
                   onClick={() => startPracticeSession(duration)}
-                  className="h-16 flex flex-col gap-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                  className="h-20 flex flex-col gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
                 >
-                  <Clock className="h-4 w-4" />
-                  <span className="font-semibold">{duration} min</span>
+                  <Clock className="h-5 w-5" />
+                  <span className="font-semibold text-lg">{duration} min</span>
                 </Button>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Stats Overview */}
+        {/* Overview Section */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Your Progress</h2>
+            <h2 className="text-2xl font-bold">Overview</h2>
             {hasStats && (
               <Badge variant={performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'}>
                 {performanceLevel?.label}
@@ -396,151 +366,81 @@ function DashboardContent() {
               description="Complete your first practice session to see detailed statistics and track your progress over time."
               action={{
                 label: "Start Practice Session",
-                onClick: () => startPracticeSession(15)
+                onClick: () => startPracticeSession(10)
               }}
             />
           ) : (
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="strengths">Strengths</TabsTrigger>
-                <TabsTrigger value="improvements">Areas to Improve</TabsTrigger>
-              </TabsList>
+            <div className="space-y-6">
+              {/* Key Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                  title="Overall Accuracy"
+                  value={`${userStats.averageAccuracy.toFixed(1)}%`}
+                  icon={Target}
+                  trend={{
+                    value: userStats.averageAccuracy >= 75 ? 5 : -2,
+                    label: "vs target"
+                  }}
+                  badge={{
+                    text: performanceLevel?.label || "Getting Started",
+                    variant: performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'
+                  }}
+                />
+                
+                <TimeCard 
+                  minutes={userStats.totalTimeSpent}
+                  label="Study Time"
+                  showHours={true}
+                />
+                
+                <StatCard
+                  title="Math Questions"
+                  value={userStats.totalQuestionsAnswered.math}
+                  description={`${Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}% of total`}
+                  icon={Calculator}
+                />
+                
+                <StatCard
+                  title="Reading & Writing"
+                  value={userStats.totalQuestionsAnswered.readingAndWriting}
+                  description={`${Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}% of total`}
+                  icon={BookText}
+                />
+              </div>
 
-              <TabsContent value="overview" className="space-y-6">
-                {/* Key Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <StatCard
-                    title="Overall Accuracy"
-                    value={`${userStats.averageAccuracy.toFixed(1)}%`}
-                    icon={Target}
-                    trend={{
-                      value: userStats.averageAccuracy >= 75 ? 5 : -2,
-                      label: "vs target"
-                    }}
-                    badge={{
-                      text: performanceLevel?.label || "Getting Started",
-                      variant: performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'
-                    }}
-                  />
-                  
-                  <TimeCard 
-                    minutes={userStats.totalTimeSpent}
-                    label="Study Time"
-                    showHours={true}
-                  />
-                  
-                  <StatCard
-                    title="Math Questions"
-                    value={userStats.totalQuestionsAnswered.math}
-                    description={`${Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}% of total`}
-                    icon={Calculator}
-                  />
-                  
-                  <StatCard
-                    title="Reading & Writing"
-                    value={userStats.totalQuestionsAnswered.readingAndWriting}
-                    description={`${Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}% of total`}
-                    icon={BookText}
-                  />
-                </div>
-
-                {/* Progress Visualization */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Subject Balance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span>Math ({userStats.totalQuestionsAnswered.math} questions)</span>
-                        <span>{Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}%</span>
-                      </div>
-                      <Progress value={(userStats.totalQuestionsAnswered.math / totalQuestions) * 100} />
+              {/* Progress Visualization */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Subject Balance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Math ({userStats.totalQuestionsAnswered.math} questions)</span>
+                      <span>{Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}%</span>
                     </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span>Reading & Writing ({userStats.totalQuestionsAnswered.readingAndWriting} questions)</span>
-                        <span>{Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}%</span>
-                      </div>
-                      <Progress value={(userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100} />
+                    <Progress value={(userStats.totalQuestionsAnswered.math / totalQuestions) * 100} />
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Reading & Writing ({userStats.totalQuestionsAnswered.readingAndWriting} questions)</span>
+                      <span>{Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}%</span>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="strengths" className="space-y-6">
-                <div className="grid gap-4">
-                  {userStats.strengths.length > 0 ? (
-                    userStats.strengths.map((strength, index) => (
-                      <Card key={index}>
-                        <CardContent className="flex items-center justify-between p-6">
-                          <div className="flex items-center gap-3">
-                            <div className="rounded-full bg-green-100 p-2">
-                              <Trophy className="h-4 w-4 text-green-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{strength.domain}</h3>
-                              <p className="text-sm text-muted-foreground">{strength.subdomain}</p>
-                            </div>
-                          </div>
-                          <Badge className="bg-green-100 text-green-800">
-                            {strength.accuracy.toFixed(1)}%
-                          </Badge>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <EmptyState
-                      icon={Trophy}
-                      title="Build your strengths"
-                      description="Complete more practice sessions to identify your strongest subjects."
-                    />
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="improvements" className="space-y-6">
-                <div className="grid gap-4">
-                  {userStats.weaknesses.length > 0 ? (
-                    userStats.weaknesses.map((weakness, index) => (
-                      <Card key={index}>
-                        <CardContent className="flex items-center justify-between p-6">
-                          <div className="flex items-center gap-3">
-                            <div className="rounded-full bg-orange-100 p-2">
-                              <Brain className="h-4 w-4 text-orange-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{weakness.domain}</h3>
-                              <p className="text-sm text-muted-foreground">{weakness.subdomain}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">
-                              {weakness.accuracy.toFixed(1)}%
-                            </Badge>
-                            <Button size="sm" variant="outline">
-                              Practice
-                              <ChevronRight className="h-3 w-3 ml-1" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <EmptyState
-                      icon={Target}
-                      title="Keep practicing!"
-                      description="Complete more sessions to see which areas need the most attention."
-                    />
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
+                    <Progress value={(userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
+        </div>
+
+        {/* Skill Mastery Section - No longer in tabs */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Skill Mastery</h2>
+          <SkillMastery />
         </div>
 
         {/* Premium Features */}
@@ -591,9 +491,5 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <PracticeSessionProvider>
-      <DashboardContent />
-    </PracticeSessionProvider>
-  );
+  return <DashboardContent />;
 }

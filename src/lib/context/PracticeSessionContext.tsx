@@ -1,14 +1,17 @@
+"use client";
+
 import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { PracticeSessionState, PracticeSession, Question, PracticeSessionDuration } from '../types/practice';
 import { collection, getDocs, getFirestore, doc, updateDoc, arrayUnion, increment, getDoc, serverTimestamp } from 'firebase/firestore';
 import { app, auth } from '../firebaseClient';
 import { FirebaseApp } from 'firebase/app';
+import { adaptiveLearningService } from '../adaptive-learning/adaptive-service';
 
 type Action =
-  | { type: 'START_SESSION'; payload: { duration: PracticeSessionDuration; questions: Question[] } }
+  | { type: 'START_SESSION'; payload: { duration: PracticeSessionDuration } }
   | { type: 'UPDATE_TIME'; payload: number }
+  | { type: 'LOAD_NEXT_QUESTION'; payload: { question: Question } }
   | { type: 'ANSWER_QUESTION'; payload: { questionId: string; answer: number | string; isCorrect: boolean; timeSpent: number; domain?: string } }
-  | { type: 'NEXT_QUESTION' }
   | { type: 'COMPLETE_SESSION' }
   | { type: 'SHOW_RESULTS' }
   | { type: 'FINISH_SESSION' }
@@ -38,6 +41,11 @@ const loadInitialState = (): PracticeSessionState => {
   }
   return initialState;
 };
+
+// Cache questions globally to avoid refetching
+let questionCache: Question[] = [];
+let cacheTimestamp = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 async function updateUserStats(
   questionId: string,
@@ -202,30 +210,84 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
   switch (action.type) {
     case 'START_SESSION':
       const now = Date.now();
-      const firstQuestionId = action.payload.questions[0]?.id;
+      console.log('Starting session with duration:', action.payload.duration);
       newState = {
         ...state,
         session: {
           duration: action.payload.duration,
-          questions: action.payload.questions,
-          currentQuestionIndex: 0,
+          questions: [], // Start with empty questions array
+          currentQuestionIndex: -1, // Will be 0 when first question loads
           startTime: now,
           endTime: now + action.payload.duration * 60 * 1000,
           isComplete: false,
           userAnswers: {},
-          questionStartTimes: firstQuestionId ? { [firstQuestionId]: now } : {},
+          questionStartTimes: {},
         },
         isActive: true,
         timeRemaining: action.payload.duration * 60,
         showResults: false,
       };
+      console.log('New session state:', newState);
       break;
 
     case 'UPDATE_TIME':
+      if (action.payload <= 0) {
+        // Time's up - complete the session
+        newState = {
+          ...state,
+          timeRemaining: 0,
+          isActive: false,
+          showResults: true,
+          session: state.session ? {
+            ...state.session,
+            isComplete: true,
+            endTime: Date.now()
+          } : null
+        };
+      } else {
+        newState = {
+          ...state,
+          timeRemaining: action.payload,
+        };
+      }
+      break;
+
+    case 'LOAD_NEXT_QUESTION':
+      if (!state.session) return state;
+      
+      // Check if we already have this question
+      const isDuplicate = state.session.questions.some(q => q.id === action.payload.question.id);
+      if (isDuplicate) {
+        console.warn('Attempting to add duplicate question, ignoring:', action.payload.question.id);
+        return state;
+      }
+      
+      const currentTime = Date.now();
+      const nextQuestionIndex = state.session.currentQuestionIndex + 1;
+      const updatedQuestions = [...state.session.questions, action.payload.question];
+      
+      console.log('Loading next question:', {
+        questionId: action.payload.question.id,
+        currentIndex: state.session.currentQuestionIndex,
+        nextIndex: nextQuestionIndex,
+        totalQuestions: updatedQuestions.length,
+        previousQuestionIds: state.session.questions.map(q => q.id)
+      });
+      
       newState = {
         ...state,
-        timeRemaining: action.payload,
+        session: {
+          ...state.session,
+          questions: updatedQuestions,
+          currentQuestionIndex: nextQuestionIndex,
+          questionStartTimes: {
+            ...state.session.questionStartTimes,
+            [action.payload.question.id]: currentTime
+          }
+        },
       };
+      
+      console.log('Next question loaded successfully:', newState.session?.currentQuestionIndex);
       break;
 
     case 'ANSWER_QUESTION':
@@ -237,12 +299,24 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
       const currentQuestion = state.session.questions[state.session.currentQuestionIndex];
       const domain = currentQuestion.domain?.toString();
       
+      // Update legacy stats
       updateUserStats(
         action.payload.questionId,
         action.payload.isCorrect,
         timeSpent,
         domain
       ).catch(console.error);
+
+      // Update adaptive learning system
+      if (auth?.currentUser) {
+        adaptiveLearningService.updateUserScore(
+          auth.currentUser.uid,
+          action.payload.questionId,
+          currentQuestion,
+          action.payload.isCorrect,
+          timeSpent
+        ).catch(console.error);
+      }
 
       const updatedSession = {
         ...state.session,
@@ -268,35 +342,6 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
         ...state,
         session: updatedSession,
       };
-      break;
-
-    case 'NEXT_QUESTION':
-      if (!state.session) return state;
-      const currentTime = Date.now();
-      const nextQuestionIndex = state.session.currentQuestionIndex + 1;
-      const nextQuestion = state.session.questions[nextQuestionIndex];
-      
-      if (nextQuestion) {
-        newState = {
-          ...state,
-          session: {
-            ...state.session,
-            currentQuestionIndex: nextQuestionIndex,
-            questionStartTimes: {
-              ...(state.session.questionStartTimes || {}),
-              [nextQuestion.id]: currentTime
-            }
-          },
-        };
-      } else {
-        newState = {
-          ...state,
-          session: {
-            ...state.session,
-            currentQuestionIndex: nextQuestionIndex
-          },
-        };
-      }
       break;
 
     case 'COMPLETE_SESSION':
@@ -346,7 +391,7 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
       const correctAnswers = Object.values(state.session.userAnswers).filter(
         (answer) => answer.isCorrect
       ).length;
-      const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+      const accuracy = answeredQuestions > 0 ? (correctAnswers / answeredQuestions) * 100 : 0;
       
       // Calculate total time spent
       const totalTimeSpent = Object.values(state.session.userAnswers).reduce(
@@ -364,7 +409,7 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
         isActive: false,
         showResults: true,
         stats: {
-          totalQuestions,
+          totalQuestions: answeredQuestions, // Only count answered questions
           answeredQuestions,
           correctAnswers,
           accuracy,
@@ -374,6 +419,11 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
       break;
 
     case 'RESET_SESSION':
+      // Clear localStorage when resetting session
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('practiceSessionState');
+      }
+      
       newState = {
         ...initialState,
       };
@@ -383,10 +433,10 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
       return state;
   }
 
-  // Save state to localStorage
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('practiceSessionState', JSON.stringify(newState));
-  }
+  // Temporarily disable localStorage saving to prevent hydration issues
+  // if (typeof window !== 'undefined') {
+  //   localStorage.setItem('practiceSessionState', JSON.stringify(newState));
+  // }
 
   return newState;
 }
@@ -402,25 +452,15 @@ export function PracticeSessionProvider({ children }: { children: React.ReactNod
 
   // Load from localStorage after hydration to prevent SSR mismatch
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !isHydrated) {
       const savedState = localStorage.getItem('practiceSessionState');
       if (savedState) {
         try {
           const parsed = JSON.parse(savedState);
           // Ensure the session is still valid
           if (parsed.session && parsed.session.endTime > Date.now()) {
-            // Replace the entire state with the parsed state
-            dispatch({ 
-              type: 'START_SESSION', 
-              payload: { 
-                duration: parsed.session.duration, 
-                questions: parsed.session.questions 
-              } 
-            });
-            // Manually update other properties that can't be set via START_SESSION
-            setTimeout(() => {
-              dispatch({ type: 'UPDATE_TIME', payload: Math.max(0, Math.floor((parsed.session.endTime - Date.now()) / 1000)) });
-            }, 0);
+            // Clear the saved state to prevent conflicts
+            localStorage.removeItem('practiceSessionState');
           }
         } catch (e) {
           console.error('Error parsing saved session state:', e);
@@ -428,26 +468,22 @@ export function PracticeSessionProvider({ children }: { children: React.ReactNod
       }
       setIsHydrated(true);
     }
-  }, []);
+  }, [isHydrated]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
 
-    if (state.isActive && state.timeRemaining > 0) {
+    if (state.isActive && state.timeRemaining > 0 && state.session) {
       timer = setInterval(() => {
         const newTimeRemaining = Math.max(0, state.timeRemaining - 1);
         dispatch({ type: 'UPDATE_TIME', payload: newTimeRemaining });
-
-        if (newTimeRemaining === 0) {
-          dispatch({ type: 'COMPLETE_SESSION' });
-        }
       }, 1000);
     }
 
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [state.isActive, state.timeRemaining]);
+  }, [state.isActive, state.timeRemaining, state.session]);
 
   return (
     <PracticeSessionContext.Provider value={{ state, dispatch }}>
@@ -465,9 +501,109 @@ export function usePracticeSession() {
 }
 
 export async function fetchQuestions(): Promise<Question[]> {
+  // Use cached questions if available and fresh
+  if (questionCache.length > 0 && Date.now() - cacheTimestamp < CACHE_DURATION) {
+    return questionCache;
+  }
+
   if (!app) throw new Error('Firebase app not initialized');
   const db = getFirestore(app as FirebaseApp);
   const questionsRef = collection(db, 'questions');
   const snapshot = await getDocs(questionsRef);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+  
+  questionCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+  cacheTimestamp = Date.now();
+  
+  return questionCache;
+}
+
+export async function fetchOptimizedQuestion(excludeQuestionIds: string[] = []): Promise<Question | null> {
+  console.log('fetchOptimizedQuestion called, excluding:', excludeQuestionIds);
+  try {
+    // Get all available questions from cache or fetch them
+    const allQuestions = await fetchQuestions();
+    console.log('Fetched questions count:', allQuestions.length);
+    
+    if (allQuestions.length === 0) {
+      console.log('No questions available');
+      return null;
+    }
+
+    // Filter out already used questions
+    const availableQuestions = allQuestions.filter(q => !excludeQuestionIds.includes(q.id));
+    console.log('Available questions after filtering:', availableQuestions.length);
+
+    if (availableQuestions.length === 0) {
+      console.log('No new questions available, reusing from all questions');
+      // If no new questions, just use any question (allow repeats)
+      const randomQuestion = allQuestions[Math.floor(Math.random() * allQuestions.length)];
+      console.log('Selected repeat question:', randomQuestion.id);
+      return randomQuestion;
+    }
+
+    if (!auth?.currentUser) {
+      // Fallback to random question if no user
+      console.log('No authenticated user, using random question');
+      const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+      console.log('Selected random question:', randomQuestion.id);
+      return randomQuestion;
+    }
+
+    console.log('Using adaptive learning for user:', auth.currentUser.uid);
+    // Use adaptive learning service to get next optimized question
+    const optimizedQuestions = await adaptiveLearningService.getOptimizedQuestionSelection(
+      auth.currentUser.uid,
+      1, // Get just one question
+      availableQuestions
+    );
+    
+    const selectedQuestion = optimizedQuestions.length > 0 ? optimizedQuestions[0] : availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+    console.log('Selected optimized question:', selectedQuestion.id);
+    return selectedQuestion;
+  } catch (error) {
+    console.error('Error fetching optimized question:', error);
+    // Fallback to random question
+    try {
+      const allQuestions = await fetchQuestions();
+      const availableQuestions = allQuestions.filter(q => !excludeQuestionIds.includes(q.id));
+      const questionsToUse = availableQuestions.length > 0 ? availableQuestions : allQuestions;
+      const fallbackQuestion = questionsToUse.length > 0 ? questionsToUse[Math.floor(Math.random() * questionsToUse.length)] : null;
+      console.log('Using fallback question:', fallbackQuestion?.id);
+      return fallbackQuestion;
+    } catch (fallbackError) {
+      console.error('Error in fallback question fetch:', fallbackError);
+      return null;
+    }
+  }
+}
+
+// Keep the old function for compatibility but mark as deprecated
+export async function fetchOptimizedQuestions(sessionLength: number = 10): Promise<Question[]> {
+  console.warn('fetchOptimizedQuestions is deprecated. Use fetchOptimizedQuestion for single questions in time-based sessions.');
+  
+  if (!auth?.currentUser) {
+    // Fallback to regular fetch if no user
+    const allQuestions = await fetchQuestions();
+    return allQuestions.slice(0, sessionLength);
+  }
+
+  try {
+    // Get all available questions
+    const allQuestions = await fetchQuestions();
+    
+    // Use adaptive learning service to get optimized selection
+    const optimizedQuestions = await adaptiveLearningService.getOptimizedQuestionSelection(
+      auth.currentUser.uid,
+      sessionLength,
+      allQuestions
+    );
+    
+    console.log(`Fetched ${optimizedQuestions.length} optimized questions for user ${auth.currentUser.uid}`);
+    return optimizedQuestions;
+  } catch (error) {
+    console.error('Error fetching optimized questions:', error);
+    // Fallback to regular random selection
+    const allQuestions = await fetchQuestions();
+    return allQuestions.sort(() => 0.5 - Math.random()).slice(0, sessionLength);
+  }
 } 

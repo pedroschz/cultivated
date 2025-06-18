@@ -34,4 +34,9 @@ export { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, Comma
 export { ScrollArea, ScrollBar } from "./ui/scroll-area";
 export { Calendar } from "./ui/calendar";
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./ui/table";
-export { Toaster } from "./ui/sonner"; 
+export { Toaster } from "./ui/sonner";
+
+// Voice Components
+export { VoiceRecorder } from "./voice/VoiceRecorder";
+export { VoiceConversation } from "./voice/VoiceConversation";
+export { TutorChat } from "./voice/TutorChat"; 

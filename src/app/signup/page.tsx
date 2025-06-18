@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebaseClient"; 
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { AdaptiveLearningEngine } from "@/lib/adaptive-learning/scoring-engine";
 import { countries } from 'countries-list';
 
 // Convert country code to flag emoji
@@ -140,6 +141,65 @@ export default function SignUpPage() {
         // Update Firebase user profile with the name
         await updateProfile(user, { displayName: name });
 
+        // Create adaptive learning data for new user
+        const engine = new AdaptiveLearningEngine();
+        const subdomainScores: { [subdomainId: string]: any } = {};
+        
+        // Initialize all 47 subdomains
+        for (let i = 0; i <= 46; i++) {
+          const subdomainId = i.toString();
+          subdomainScores[subdomainId] = engine.initializeSubdomainScore(subdomainId);
+        }
+
+        // Calculate domain summaries
+        const domainRanges: { [key: string]: [number, number] } = {
+          '0': [0, 7], '1': [8, 17], '2': [18, 30], '3': [31, 36],
+          '4': [37, 39], '5': [40, 42], '6': [43, 44], '7': [45, 46]
+        };
+
+        const domainSummaries: { [key: string]: any } = {};
+        Object.entries(domainRanges).forEach(([domainId, range]) => {
+          const [start, end] = range;
+          let totalCompetency = 0;
+          let count = 0;
+
+          for (let i = start; i <= end; i++) {
+            const subdomainId = i.toString();
+            if (subdomainScores[subdomainId]) {
+              totalCompetency += subdomainScores[subdomainId].competencyScore;
+              count++;
+            }
+          }
+
+          domainSummaries[domainId] = {
+            domainId: parseInt(domainId),
+            averageCompetency: count > 0 ? totalCompetency / count : 0,
+            lastUpdated: Date.now()
+          };
+        });
+
+        const adaptiveLearningData = {
+          subdomainScores,
+          domainSummaries,
+          learningProfile: {
+            learningVelocity: 5,
+            retentionRate: 7,
+            consistencyScore: 6,
+            sessionOptimalLength: 15,
+            averageSessionLength: 12,
+            preferredDifficultyProgression: 1.2,
+            prioritySubdomains: [],
+            strongSubdomains: []
+          },
+          overallCompetency: 50,
+          totalQuestionsAnswered: 0,
+          totalTimeSpent: 0,
+          algorithmVersion: '1.0.0',
+          lastFullUpdate: Date.now(),
+          lastQuestionUpdate: Date.now(),
+          questionQueue: []
+        };
+
         // Create user document in Firestore
         const userData = {
           uid: user.uid,
@@ -153,13 +213,7 @@ export default function SignUpPage() {
           lastLogin: serverTimestamp(),
           questionQueue: [],
           history: [],
-          stats: {
-            totalAnswered: 0,
-            correctAnswers: 0,
-            accuracy: 0,
-            averageTime: 0,
-            domains: {}
-          },
+          adaptiveLearning: adaptiveLearningData,
           bookmarks: [],
           settings: {
             darkMode: false,

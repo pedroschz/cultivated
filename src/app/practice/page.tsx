@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { usePracticeSession, PracticeSessionProvider, fetchQuestions } from '@/lib/context/PracticeSessionContext';
+import { usePracticeSession, fetchOptimizedQuestion } from '@/lib/context/PracticeSessionContext';
 import { Question } from '@/lib/types/practice';
 import { useRouter } from 'next/navigation';
 import { auth, app } from '@/lib/firebaseClient';
@@ -10,8 +10,6 @@ import {
   MainLayout, 
   PageHeader,
   ScoreCard,
-  Timer,
-  ProgressIndicator,
   Card,
   CardContent,
   CardHeader,
@@ -29,7 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   EmptyState,
-  Loading
+  Loading,
+  Progress
 } from '@/components';
 import { 
   BookmarkIcon, 
@@ -41,45 +40,97 @@ import {
   BookOpenIcon,
   TargetIcon,
   Trophy,
-  XIcon
+  XIcon,
+  Clock,
+  Loader2,
+  Mic,
+  MessageSquare,
+  CheckCircle,
+  MicOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useVoiceRecording } from '@/lib/hooks/useVoiceRecording';
+import { VoiceRecorder } from '@/components/voice/VoiceRecorder';
+import { VoiceConversation } from '@/components/voice/VoiceConversation';
+import { TutorChat } from '@/components/voice/TutorChat';
 
 function PracticeSession() {
   const { state, dispatch } = usePracticeSession();
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [textAnswer, setTextAnswer] = useState('');
+  const [loadingNextQuestion, setLoadingNextQuestion] = useState(false);
+  const [hasLoadedFirstQuestion, setHasLoadedFirstQuestion] = useState(false);
+  const [showTutorChat, setShowTutorChat] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
+  const [transcript, setTranscript] = useState<string>('');
   const router = useRouter();
 
+  // Voice recording hook
+  const voiceRecording = useVoiceRecording();
+
+  // Load first question when session starts
   useEffect(() => {
-    async function loadQuestions() {
-      try {
-        const fetchedQuestions = await fetchQuestions();
-        setQuestions(fetchedQuestions);
-      } catch (error) {
-        console.error('Error loading questions:', error);
-        toast.error('Failed to load questions');
-      } finally {
-        setIsLoading(false);
+    async function loadFirstQuestion() {
+      console.log('Checking if should load first question:', {
+        hasSession: !!state.session,
+        questionsLength: state.session?.questions.length,
+        currentIndex: state.session?.currentQuestionIndex,
+        isLoading,
+        hasLoadedFirstQuestion
+      });
+
+      if (state.session && 
+          state.session.questions.length === 0 && 
+          state.session.currentQuestionIndex === -1 && 
+          !isLoading && 
+          !hasLoadedFirstQuestion) {
+        console.log('Loading first question...');
+        setIsLoading(true);
+        setHasLoadedFirstQuestion(true);
+        try {
+          const question = await fetchOptimizedQuestion();
+          console.log('Fetched question:', question);
+          if (question) {
+            dispatch({ 
+              type: 'LOAD_NEXT_QUESTION', 
+              payload: { question } 
+            });
+          } else {
+            console.log('No question available');
+            toast.error('No questions available');
+            router.replace('/dashboard');
+          }
+        } catch (error) {
+          console.error('Error loading first question:', error);
+          toast.error('Failed to load questions');
+          router.replace('/dashboard');
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
-    loadQuestions();
-  }, []);
 
+    if (state.session) {
+      loadFirstQuestion();
+    }
+  }, [state.session, hasLoadedFirstQuestion, dispatch, router, isLoading]);
+
+  // Redirect if no active session and reset question loading flag
   useEffect(() => {
-    // Only redirect if we're not loading and there's definitely no session
-    if (!state.session && !isLoading && questions.length > 0) {
+    if (!state.session && !isLoading && !state.showResults) {
+      console.log('No session found, redirecting to dashboard');
+      console.log('Current state:', state);
+      setHasLoadedFirstQuestion(false);
       router.replace('/dashboard');
     }
-  }, [state.session, router, isLoading, questions.length]);
+  }, [state.session, router, isLoading, state.showResults]);
 
   useEffect(() => {
     async function checkBookmarkStatus() {
-      if (!auth?.currentUser || !state.session) return;
+      if (!auth?.currentUser || !state.session || state.session.currentQuestionIndex < 0) return;
       
       try {
         const db = getFirestore(app!);
@@ -89,8 +140,10 @@ function PracticeSession() {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const bookmarks = userData.bookmarks || [];
-          const currentQuestionId = state.session.questions[state.session.currentQuestionIndex].id;
-          setIsBookmarked(bookmarks.includes(currentQuestionId));
+          const currentQuestionId = state.session.questions[state.session.currentQuestionIndex]?.id;
+          if (currentQuestionId) {
+            setIsBookmarked(bookmarks.includes(currentQuestionId));
+          }
         }
       } catch (error) {
         console.error('Error checking bookmark status:', error);
@@ -101,7 +154,7 @@ function PracticeSession() {
   }, [state.session?.currentQuestionIndex]);
 
   const handleBookmark = async () => {
-    if (!auth?.currentUser || !state.session) return;
+    if (!auth?.currentUser || !state.session || state.session.currentQuestionIndex < 0) return;
 
     const db = getFirestore(app!);
     const userRef = doc(db, 'users', auth.currentUser.uid);
@@ -136,12 +189,25 @@ function PracticeSession() {
     toast.info('Practice session ended');
   };
 
-  const handleMultipleChoiceAnswer = (optionIndex: number) => {
+  const handleMultipleChoiceAnswer = async (optionIndex: number) => {
     if (!state.session) return;
     
     const currentQuestion = state.session.questions[state.session.currentQuestionIndex];
     const isCorrect = optionIndex === currentQuestion.answer;
     const timeSpent = state.session.duration * 60 - state.timeRemaining;
+    
+    console.log('Answer submitted:', { optionIndex, correctAnswer: currentQuestion.answer, isCorrect });
+    
+    // Stop recording and get audio
+    let audioBlob = null;
+    if (voiceRecording.isRecording) {
+      audioBlob = await voiceRecording.stopRecording();
+      setRecordedAudio(audioBlob);
+      
+      if (audioBlob) {
+        toast.success('Thinking process recorded!');
+      }
+    }
     
     dispatch({
       type: 'ANSWER_QUESTION',
@@ -153,14 +219,36 @@ function PracticeSession() {
         domain: currentQuestion.domain ? String(currentQuestion.domain) : undefined
       },
     });
+
+    // If answer is wrong, show voice tutor (with or without recorded audio)
+    if (!isCorrect) {
+      console.log('Wrong answer - starting voice conversation');
+      setRecordedAudio(audioBlob); // Set the audio even if null
+      setShowTutorChat(true);
+    } else {
+      console.log('Correct answer - no tutoring needed');
+    }
   };
 
-  const handleTextSubmit = () => {
+  const handleTextSubmit = async () => {
     if (textAnswer.trim() === '' || !state.session) return;
     
     const currentQuestion = state.session.questions[state.session.currentQuestionIndex];
     const isCorrect = textAnswer.trim().toLowerCase() === String(currentQuestion.answer).toLowerCase();
     const timeSpent = state.session.duration * 60 - state.timeRemaining;
+    
+    console.log('Text answer submitted:', { userAnswer: textAnswer.trim(), correctAnswer: currentQuestion.answer, isCorrect });
+    
+    // Stop recording and get audio
+    let audioBlob = null;
+    if (voiceRecording.isRecording) {
+      audioBlob = await voiceRecording.stopRecording();
+      setRecordedAudio(audioBlob);
+      
+      if (audioBlob) {
+        toast.success('Thinking process recorded!');
+      }
+    }
     
     dispatch({
       type: 'ANSWER_QUESTION',
@@ -173,16 +261,74 @@ function PracticeSession() {
       },
     });
     
+    // If answer is wrong, show voice tutor (with or without recorded audio)
+    if (!isCorrect) {
+      console.log('Wrong answer - starting voice conversation');
+      setRecordedAudio(audioBlob); // Set the audio even if null
+      setShowTutorChat(true);
+    } else {
+      console.log('Correct answer - no tutoring needed');
+    }
+    
     setTextAnswer('');
   };
 
-  const handleNextQuestion = () => {
-    dispatch({ type: 'NEXT_QUESTION' });
-  };
-
-  const handleFinishSession = () => {
-    if (state.session!.currentQuestionIndex === state.session!.questions.length - 1) {
+  const handleNextQuestion = async () => {
+    if (!state.session) return;
+    
+    // Check if time is up
+    if (state.timeRemaining <= 0) {
       dispatch({ type: 'COMPLETE_SESSION' });
+      return;
+    }
+
+    console.log('Loading next question...');
+    setLoadingNextQuestion(true);
+    
+    try {
+      // Get IDs of already used questions to avoid duplicates
+      const usedQuestionIds = state.session.questions.map(q => q.id);
+      console.log('Used question IDs:', usedQuestionIds);
+      
+      const nextQuestion = await fetchOptimizedQuestion(usedQuestionIds);
+      console.log('Next question fetched:', nextQuestion);
+      
+      if (nextQuestion) {
+        // Double check we're not getting a duplicate
+        if (usedQuestionIds.includes(nextQuestion.id)) {
+          console.warn('Received duplicate question despite filtering:', nextQuestion.id);
+          // Try again with stricter exclusion
+          const retryQuestion = await fetchOptimizedQuestion(usedQuestionIds);
+          if (retryQuestion && !usedQuestionIds.includes(retryQuestion.id)) {
+            dispatch({ 
+              type: 'LOAD_NEXT_QUESTION', 
+              payload: { question: retryQuestion } 
+            });
+            console.log('Retry question dispatched:', retryQuestion.id);
+          } else {
+            console.log('Still no unique question after retry, completing session');
+            toast.info('No more unique questions available');
+            dispatch({ type: 'COMPLETE_SESSION' });
+          }
+        } else {
+          dispatch({ 
+            type: 'LOAD_NEXT_QUESTION', 
+            payload: { question: nextQuestion } 
+          });
+          console.log('Next question dispatched:', nextQuestion.id);
+        }
+      } else {
+        console.log('No more questions available, completing session');
+        toast.info('No more questions available');
+        dispatch({ type: 'COMPLETE_SESSION' });
+      }
+    } catch (error) {
+      console.error('Error loading next question:', error);
+      toast.error('Failed to load next question');
+      // Continue anyway - complete session
+      dispatch({ type: 'COMPLETE_SESSION' });
+    } finally {
+      setLoadingNextQuestion(false);
     }
   };
 
@@ -202,6 +348,19 @@ function PracticeSession() {
     return null;
   };
 
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getTimeProgress = () => {
+    if (!state.session) return 0;
+    const totalTime = state.session.duration * 60;
+    const elapsedTime = totalTime - state.timeRemaining;
+    return (elapsedTime / totalTime) * 100;
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -212,28 +371,20 @@ function PracticeSession() {
     );
   }
 
-  if (!questions.length) {
-    return (
-      <MainLayout>
-        <EmptyState
-          icon={BookOpenIcon}
-          title="No questions available"
-          description="There are no practice questions available at the moment. Please check back later or contact support."
-          action={{
-            label: "Return to Dashboard",
-            onClick: () => router.replace('/dashboard')
-          }}
-        />
-      </MainLayout>
-    );
-  }
-
   // Wait for session to be initialized
-  if (!state.session) {
+  if (!state.session || state.session.currentQuestionIndex < 0) {
+    console.log('Session not ready:', { 
+      hasSession: !!state.session, 
+      currentIndex: state.session?.currentQuestionIndex,
+      fullState: state 
+    });
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <Loading size="lg" text="Initializing practice session..." />
+          <Loading size="lg" text="Preparing your session..." />
+          <div className="mt-4 text-sm text-muted-foreground">
+            Debug: {state.session ? `Session exists, index: ${state.session.currentQuestionIndex}` : 'No session found'}
+          </div>
         </div>
       </MainLayout>
     );
@@ -243,11 +394,11 @@ function PracticeSession() {
   if (state.showResults) {
     if (!state.session) return null;
     
+    const answeredQuestions = Object.values(state.session.userAnswers).length;
     const correctAnswers = Object.values(state.session.userAnswers).filter(
       (answer) => answer.isCorrect
     ).length;
-    const totalQuestions = state.session.questions.length;
-    const percentage = (correctAnswers / totalQuestions) * 100;
+    const percentage = answeredQuestions > 0 ? (correctAnswers / answeredQuestions) * 100 : 0;
 
     return (
       <MainLayout>
@@ -272,6 +423,16 @@ function PracticeSession() {
             <Card>
               <CardContent className="flex items-center justify-between p-6">
                 <div>
+                  <p className="text-sm font-medium text-muted-foreground">Questions Answered</p>
+                  <p className="text-2xl font-bold text-primary">{answeredQuestions}</p>
+                </div>
+                <TargetIcon className="h-8 w-8 text-primary" />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="flex items-center justify-between p-6">
+                <div>
                   <p className="text-sm font-medium text-muted-foreground">Correct</p>
                   <p className="text-2xl font-bold text-green-600">{correctAnswers}</p>
                 </div>
@@ -283,31 +444,52 @@ function PracticeSession() {
               <CardContent className="flex items-center justify-between p-6">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Incorrect</p>
-                  <p className="text-2xl font-bold text-red-600">{totalQuestions - correctAnswers}</p>
+                  <p className="text-2xl font-bold text-red-600">{answeredQuestions - correctAnswers}</p>
                 </div>
                 <XCircleIcon className="h-8 w-8 text-red-600" />
               </CardContent>
             </Card>
-            
-            <Card>
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{totalQuestions}</p>
-                </div>
-                <TargetIcon className="h-8 w-8 text-blue-600" />
-              </CardContent>
-            </Card>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex gap-4">
             <Button 
-              onClick={() => router.replace('/dashboard')}
+              onClick={() => {
+                console.log('Return to Dashboard clicked');
+                dispatch({ type: 'RESET_SESSION' });
+                
+                // Small delay to ensure state is reset before navigation
+                setTimeout(() => {
+                  router.replace('/dashboard');
+                  toast.success('Session completed');
+                }, 100);
+              }} 
+              className="flex-1 gap-2"
               size="lg"
-              className="gap-2"
             >
               <HomeIcon className="h-4 w-4" />
               Return to Dashboard
+            </Button>
+            <Button 
+              onClick={() => {
+                console.log('Practice Again clicked');
+                const sessionDuration = state.session!.duration;
+                dispatch({ type: 'RESET_SESSION' });
+                setHasLoadedFirstQuestion(false);
+                
+                // Small delay to ensure state is reset properly
+                setTimeout(() => {
+                  dispatch({
+                    type: 'START_SESSION',
+                    payload: { duration: sessionDuration }
+                  });
+                  toast.success('Starting new practice session');
+                }, 100);
+              }}
+              variant="outline" 
+              className="flex-1 gap-2"
+              size="lg"
+            >
+              Practice Again
             </Button>
           </div>
         </div>
@@ -316,7 +498,37 @@ function PracticeSession() {
   }
 
   const currentQuestion = state.session.questions[state.session.currentQuestionIndex];
-  const userAnswer = state.session.userAnswers[currentQuestion.id];
+  const userAnswer = state.session.userAnswers[currentQuestion?.id];
+
+  console.log('Current question state:', {
+    currentIndex: state.session.currentQuestionIndex,
+    totalQuestions: state.session.questions.length,
+    currentQuestionId: currentQuestion?.id,
+    hasUserAnswer: !!userAnswer
+  });
+
+  // If we don't have a current question but the index suggests we should, show loading
+  if (!currentQuestion) {
+    console.log('No current question found:', {
+      hasSession: !!state.session,
+      currentIndex: state.session?.currentQuestionIndex,
+      questionsLength: state.session?.questions.length,
+      loadingNextQuestion
+    });
+    
+    return (
+      <MainLayout 
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Practice Session' }
+        ]}
+      >
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loading size="lg" text={loadingNextQuestion ? "Loading next question..." : "Loading question..."} />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout 
@@ -329,13 +541,23 @@ function PracticeSession() {
         {/* Session Header */}
         <PageHeader 
           title="Practice Session"
-          description={`Question ${state.session.currentQuestionIndex + 1} of ${state.session.questions.length}`}
+          description={`Question ${state.session.currentQuestionIndex + 1} • ${Object.keys(state.session.userAnswers).length} answered`}
         >
           <div className="flex items-center space-x-4">
-            <Timer 
-              initialTime={state.session.duration * 60}
-              variant="compact"
-            />
+            {/* Time Display */}
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Badge 
+                variant={state.timeRemaining <= 60 ? "destructive" : state.timeRemaining <= 300 ? "secondary" : "outline"}
+                className={cn(
+                  "font-mono",
+                  state.timeRemaining <= 10 && "animate-pulse"
+                )}
+              >
+                {formatTime(state.timeRemaining)}
+              </Badge>
+            </div>
+            
             <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
@@ -347,7 +569,7 @@ function PracticeSession() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Exit Practice Session</AlertDialogTitle>
                   <AlertDialogDescription>
-                                         Are you sure you want to exit this session? Your progress will be saved, but you&apos;ll need to start a new session to continue practicing.
+                    Are you sure you want to exit this session? Your progress will be saved, but you&apos;ll need to start a new session to continue practicing.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -361,12 +583,41 @@ function PracticeSession() {
           </div>
         </PageHeader>
 
-        {/* Progress Bar */}
-        <ProgressIndicator 
-          current={state.session.currentQuestionIndex + 1}
-          total={state.session.questions.length}
-          showPercentage={true}
-        />
+        {/* Time Progress Bar */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Time Elapsed</span>
+                <span>{formatTime((state.session.duration * 60) - state.timeRemaining)} / {formatTime(state.session.duration * 60)}</span>
+              </div>
+              <Progress 
+                value={getTimeProgress()} 
+                className="h-2"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Voice Recording Section */}
+        {!userAnswer && (
+          <div className="lg:max-w-md">
+            <VoiceRecorder
+              isRecording={voiceRecording.isRecording}
+              isPaused={voiceRecording.isPaused}
+              duration={voiceRecording.duration}
+              volume={voiceRecording.volume}
+              hasPermission={voiceRecording.hasPermission}
+              isRequestingPermission={voiceRecording.isRequestingPermission}
+              error={voiceRecording.error}
+              onStartRecording={voiceRecording.startRecording}
+              onStopRecording={voiceRecording.stopRecording}
+              onPauseRecording={voiceRecording.pauseRecording}
+              onResumeRecording={voiceRecording.resumeRecording}
+              onRequestPermission={voiceRecording.requestPermission}
+            />
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -478,20 +729,20 @@ function PracticeSession() {
                       // Multiple Choice Results
                       <div className="grid gap-3">
                         {currentQuestion.options.map((option, index) => (
-                                                     <Button
-                             key={index}
-                             variant={getOptionVariant(index, userAnswer, Number(currentQuestion.answer))}
-                             className="w-full justify-start h-auto p-4 text-left whitespace-normal"
-                             disabled
-                           >
-                             <div className="flex items-start gap-3 w-full">
-                               <div className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 flex items-center justify-center text-xs font-medium">
-                                 {String.fromCharCode(65 + index)}
-                               </div>
-                               <span className="flex-1">{option}</span>
-                               {getOptionIcon(index, userAnswer, Number(currentQuestion.answer))}
-                             </div>
-                           </Button>
+                          <Button
+                            key={index}
+                            variant={getOptionVariant(index, userAnswer, Number(currentQuestion.answer))}
+                            className="w-full justify-start h-auto p-4 text-left whitespace-normal"
+                            disabled
+                          >
+                            <div className="flex items-start gap-3 w-full">
+                              <div className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 flex items-center justify-center text-xs font-medium">
+                                {String.fromCharCode(65 + index)}
+                              </div>
+                              <span className="flex-1">{option}</span>
+                              {getOptionIcon(index, userAnswer, Number(currentQuestion.answer))}
+                            </div>
+                          </Button>
                         ))}
                       </div>
                     ) : (
@@ -537,19 +788,41 @@ function PracticeSession() {
                     </div>
 
                     {/* Navigation */}
-                    <div className="pt-4">
-                      {state.session.currentQuestionIndex < state.session.questions.length - 1 ? (
+                    <div className="pt-4 space-y-3">
+                      {/* Loading Progress Bar */}
+                      {loadingNextQuestion && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Loading next question...</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '100%' }} />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {state.timeRemaining > 0 ? (
                         <Button
                           onClick={handleNextQuestion}
                           className="w-full gap-2"
                           size="lg"
+                          disabled={loadingNextQuestion}
                         >
-                          Next Question
-                          <ArrowRightIcon className="h-4 w-4" />
+                          {loadingNextQuestion ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading Question...
+                            </>
+                          ) : (
+                            <>
+                              Next Question
+                              <ArrowRightIcon className="h-4 w-4" />
+                            </>
+                          )}
                         </Button>
                       ) : (
                         <Button
-                          onClick={handleFinishSession}
+                          onClick={() => dispatch({ type: 'COMPLETE_SESSION' })}
                           className="w-full gap-2"
                           size="lg"
                         >
@@ -586,14 +859,21 @@ function PracticeSession() {
           )}
         </div>
       </div>
+
+      {/* AI Tutor Chat */}
+      <VoiceConversation
+        isOpen={showTutorChat}
+        questionText={currentQuestion?.question || ''}
+        userAnswer={userAnswer?.answer || ''}
+        correctAnswer={currentQuestion?.answer || ''}
+        thinkingAudio={recordedAudio}
+        onClose={() => setShowTutorChat(false)}
+        onContinuePractice={handleNextQuestion}
+      />
     </MainLayout>
   );
 }
 
 export default function PracticePage() {
-  return (
-    <PracticeSessionProvider>
-      <PracticeSession />
-    </PracticeSessionProvider>
-  );
+  return <PracticeSession />;
 } 
