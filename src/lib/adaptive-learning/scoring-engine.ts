@@ -2,13 +2,8 @@ import {
   SubdomainScore, 
   AdaptiveLearningData, 
   ScoreUpdate, 
-  ScoringConfig,
-  TimeDecayConfig,
-  QuestionSelectionCriteria,
-  AdaptiveLearningProfile
+  ScoringConfig
 } from '../types/adaptive-learning';
-import { Question } from '../types/practice';
-import { SUBDOMAIN_NAMES } from '../constants';
 
 // Default scoring configuration
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
@@ -50,7 +45,7 @@ export class AdaptiveLearningEngine {
   /**
    * Initialize a new subdomain score for a user
    */
-  initializeSubdomainScore(subdomainId: string): SubdomainScore {
+  initializeSubdomainScore(): SubdomainScore {
     return {
       competencyScore: 50, // Start at neutral
       confidenceLevel: 50,
@@ -208,8 +203,8 @@ export class AdaptiveLearningEngine {
   generateQuestionSelectionCriteria(
     adaptiveLearningData: AdaptiveLearningData,
     sessionLength: number = 10
-  ): QuestionSelectionCriteria[] {
-    const criteria: QuestionSelectionCriteria[] = [];
+  ) {
+    const criteria = [];
     
     // Apply time decay to all subdomains first
     const updatedSubdomains: { [key: string]: SubdomainScore } = {};

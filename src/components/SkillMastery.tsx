@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+
 import { auth, app } from '@/lib/firebaseClient';
 import { adaptiveLearningService } from '@/lib/adaptive-learning/adaptive-service';
 import { AdaptiveLearningData } from '@/lib/types/adaptive-learning';
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';

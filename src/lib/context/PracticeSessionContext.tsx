@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { PracticeSessionState, PracticeSession, Question, PracticeSessionDuration } from '../types/practice';
-import { collection, getDocs, getFirestore, doc, updateDoc, arrayUnion, increment, getDoc, serverTimestamp } from 'firebase/firestore';
-import { app, auth } from '../firebaseClient';
+import { collection, getDocs, getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { app, auth } from '@/lib/firebaseClient';
 import { FirebaseApp } from 'firebase/app';
 import { adaptiveLearningService } from '../adaptive-learning/adaptive-service';
 
@@ -95,30 +95,34 @@ async function updateUserStats(
       if (!currentStats.readingAndWriting[field]) currentStats.readingAndWriting[field] = {};
     });
 
-    // Determine which field and category the domain belongs to
+    // FIXED: Determine which field and category the domain belongs to
+    // Domain is 0-7, we need to map it correctly to fields
     const domainNum = parseInt(domain || '0');
     let field: string;
     let category: 'math' | 'readingAndWriting';
 
-    if (domainNum <= 7) {
+    // Math domains: 0-3
+    if (domainNum === 0) {
       field = 'field0';
       category = 'math';
-    } else if (domainNum <= 17) {
+    } else if (domainNum === 1) {
       field = 'field1';
       category = 'math';
-    } else if (domainNum <= 30) {
+    } else if (domainNum === 2) {
       field = 'field2';
       category = 'math';
-    } else if (domainNum <= 36) {
+    } else if (domainNum === 3) {
       field = 'field3';
       category = 'math';
-    } else if (domainNum <= 39) {
+    }
+    // Reading & Writing domains: 4-7
+    else if (domainNum === 4) {
       field = 'field4';
       category = 'readingAndWriting';
-    } else if (domainNum <= 42) {
+    } else if (domainNum === 5) {
       field = 'field5';
       category = 'readingAndWriting';
-    } else if (domainNum <= 44) {
+    } else if (domainNum === 6) {
       field = 'field6';
       category = 'readingAndWriting';
     } else {
@@ -129,22 +133,22 @@ async function updateUserStats(
     // Get current domain stats
     const domainStats = currentStats[category][field][domain || ''] || {
       totalAnswered: 0,
-      correctAnswers: 0,
+      totalCorrect: 0, // FIXED: Changed from correctAnswers to totalCorrect
       accuracy: 0,
       averageTime: 0,
     };
 
     // Calculate new stats
     const newTotalAnswered = domainStats.totalAnswered + 1;
-    const newCorrectAnswers = domainStats.correctAnswers + (isCorrect ? 1 : 0);
-    const newAccuracy = (newCorrectAnswers / newTotalAnswered) * 100;
+    const newTotalCorrect = domainStats.totalCorrect + (isCorrect ? 1 : 0); // FIXED: Changed variable name
+    const newAccuracy = (newTotalCorrect / newTotalAnswered) * 100;
     const newAverageTime = ((domainStats.averageTime * domainStats.totalAnswered) + timeSpent) / newTotalAnswered;
 
     // Update stats for this domain
     const updates = {
       [`stats.${category}.${field}.${domain}`]: {
         totalAnswered: newTotalAnswered,
-        correctAnswers: newCorrectAnswers,
+        totalCorrect: newTotalCorrect, // FIXED: Changed from correctAnswers to totalCorrect
         accuracy: newAccuracy,
         averageTime: newAverageTime,
       },
@@ -386,7 +390,6 @@ function practiceSessionReducer(state: PracticeSessionState, action: Action): Pr
       if (!state.session) return state;
       
       // Calculate final stats
-      const totalQuestions = state.session.questions.length;
       const answeredQuestions = Object.keys(state.session.userAnswers).length;
       const correctAnswers = Object.values(state.session.userAnswers).filter(
         (answer) => answer.isCorrect

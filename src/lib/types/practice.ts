@@ -1,5 +1,21 @@
-export type QuestionField = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type QuestionField = number; // 0-46 (47 total fields/subdomains)
 export type QuestionDifficulty = 0 | 1 | 2;
+
+// Enhanced option type that can be text, image, or both
+export interface QuestionOption {
+  text?: string;
+  imageURL?: string;
+  alt?: string; // Alternative text for accessibility
+}
+
+// Image metadata for optimization
+export interface QuestionImage {
+  url: string;
+  alt?: string;
+  width?: number;
+  height?: number;
+  caption?: string;
+}
 
 export interface Question {
   id: string;
@@ -7,9 +23,16 @@ export interface Question {
   domain: number;
   difficulty: QuestionDifficulty;
   question: string;
-  options: string[] | string;
+  
+  // Enhanced options - can be string array (legacy), QuestionOption array, or single string
+  options: string[] | QuestionOption[] | string;
+  
   answer: number | string;
-  imageURL?: string;
+  
+  // Enhanced image support
+  imageURL?: string; // Legacy support
+  questionImage?: QuestionImage; // New enhanced image support
+  
   token?: string;
   passage?: string;
 }

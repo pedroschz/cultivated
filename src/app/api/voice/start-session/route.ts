@@ -4,7 +4,7 @@ let activeSession: any = null;
 
 export async function POST(request: NextRequest) {
   try {
-    const { questionText, userAnswer, correctAnswer, thinkingAudio } = await request.json();
+    const body: Record<string, unknown> = await request.json();
 
     // End any existing session
     if (activeSession) {
@@ -17,9 +17,9 @@ export async function POST(request: NextRequest) {
 
     const systemInstruction = `You are an expert SAT tutor. A student just answered a question incorrectly and I have their thinking process recorded. 
 
-Question: ${questionText}
-Student's Answer: ${userAnswer}
-Correct Answer: ${correctAnswer}
+Question: ${body.questionText}
+Student's Answer: ${body.userAnswer}
+Correct Answer: ${body.correctAnswer}
 
 Your job is to:
 1. Listen to their thinking process audio and understand where they went wrong
@@ -36,7 +36,7 @@ Start by acknowledging what you heard in their thinking and gently guiding them 
     activeSession = {
       id: Date.now().toString(),
       systemInstruction,
-      thinkingAudio,
+      thinkingAudio: body.thinkingAudio,
       isActive: true
     };
 

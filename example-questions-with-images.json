@@ -1,0 +1,64 @@
+[
+  {
+    "id": "math-graph-question",
+    "field": 0,
+    "domain": 0,
+    "difficulty": 1,
+    "question": "Based on the graph shown, what is the approximate value of y when x = 3?",
+    "options": ["5", "7", "9", "11"],
+    "answer": 1,
+    "questionImage": {
+      "localPath": "./images/math-graph.png",
+      "remotePath": "questions/graphs/math-graph.png"
+    }
+  },
+  {
+    "id": "geometry-shapes",
+    "field": 3,
+    "domain": 3,
+    "difficulty": 0,
+    "question": "Which of the following shapes has the largest area?",
+    "options": [
+      {
+        "text": "Shape A",
+        "imageURL": "./images/square-5x5.png",
+        "alt": "A 5x5 square"
+      },
+      {
+        "text": "Shape B", 
+        "imageURL": "./images/circle-radius-3.png",
+        "alt": "A circle with radius 3"
+      },
+      {
+        "text": "Shape C",
+        "imageURL": "./images/triangle-base-8-height-6.png",
+        "alt": "A triangle with base 8 and height 6"
+      },
+      {
+        "text": "Shape D",
+        "imageURL": "./images/rectangle-4x7.png",
+        "alt": "A 4x7 rectangle"
+      }
+    ],
+    "answer": 2
+  },
+  {
+    "id": "reading-comprehension-with-diagram",
+    "field": 4,
+    "domain": 4,
+    "difficulty": 1,
+    "question": "According to the diagram and the passage, what is the main function of component X?",
+    "passage": "The water cycle is a continuous process that involves the movement of water throughout Earth's atmosphere, land, and oceans. Solar energy drives this process by heating water in oceans, lakes, and rivers, causing evaporation. The water vapor rises into the atmosphere where it cools and condenses to form clouds.",
+    "options": [
+      "Energy input",
+      "Water collection", 
+      "Vapor formation",
+      "Temperature regulation"
+    ],
+    "answer": 0,
+    "questionImage": {
+      "localPath": "./images/water-cycle-diagram.png",
+      "remotePath": "questions/diagrams/water-cycle.png"
+    }
+  }
+] 

@@ -2,17 +2,18 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth } from "@/lib/firebaseAdmin";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const requestBody = await req.json();
-    const { token } = requestBody;
+    const { token } = await request.json();
 
     if (!token) {
-      return NextResponse.json({ error: "Token not provided in request body" }, { status: 400 });
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
+    // Verify the token with Firebase Admin
+    await adminAuth.verifyIdToken(token);
+
     // Validate token before setting cookie
-    const decoded = await adminAuth.verifyIdToken(token as string);
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
 
     const cookieStore = await cookies();

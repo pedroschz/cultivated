@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import RecordRTC from 'recordrtc';
 import { toast } from 'sonner';
 
 export interface VoiceRecordingState {
@@ -43,7 +42,7 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
   });
 
   const [isClient, setIsClient] = useState(false);
-  const recorderRef = useRef<RecordRTC | null>(null);
+  const recorderRef = useRef<any | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -201,8 +200,9 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
         source.connect(analyserRef.current);
       }
       
-      // Set up recorder
-      if (typeof RecordRTC !== 'undefined') {
+      // Set up recorder - import dynamically to avoid SSR issues
+      try {
+        const RecordRTC = (await import('recordrtc')).default;
         recorderRef.current = new RecordRTC(stream, {
           type: 'audio',
           mimeType: 'audio/wav',
@@ -212,6 +212,13 @@ export function useVoiceRecording(): VoiceRecordingState & VoiceRecordingActions
         });
         
         recorderRef.current.startRecording();
+      } catch (error) {
+        console.error('Failed to import RecordRTC:', error);
+        setState(prev => ({ 
+          ...prev, 
+          error: 'Recording not supported in this environment' 
+        }));
+        return false;
       }
       
       startTimeRef.current = Date.now();

@@ -148,7 +148,7 @@ export default function SignUpPage() {
         // Initialize all 47 subdomains
         for (let i = 0; i <= 46; i++) {
           const subdomainId = i.toString();
-          subdomainScores[subdomainId] = engine.initializeSubdomainScore(subdomainId);
+          subdomainScores[subdomainId] = engine.initializeSubdomainScore();
         }
 
         // Calculate domain summaries

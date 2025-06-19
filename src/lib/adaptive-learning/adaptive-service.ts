@@ -77,9 +77,32 @@ export class AdaptiveLearningService {
         return false;
       }
 
+      // FIXED: Map question to actual subdomain ID
+      // Questions have 'field' which represents the actual subdomain ID (0-46)
+      // If field exists, use it; otherwise map domain to a representative subdomain
+      let subdomainId: string;
+      
+      if (question.field !== undefined) {
+        // Use the field as the actual subdomain ID
+        subdomainId = question.field.toString();
+      } else {
+        // Fallback: map domain to first subdomain in that domain's range
+        const domainToSubdomainMap: { [key: number]: number } = {
+          0: 0,   // Algebra -> subdomain 0
+          1: 8,   // Problem Solving -> subdomain 8
+          2: 18,  // Advanced Math -> subdomain 18
+          3: 31,  // Geometry -> subdomain 31
+          4: 37,  // Information and Ideas -> subdomain 37
+          5: 40,  // Craft and Structure -> subdomain 40
+          6: 43,  // Expression of Ideas -> subdomain 43
+          7: 45,  // Standard English -> subdomain 45
+        };
+        subdomainId = (domainToSubdomainMap[question.domain] || 0).toString();
+      }
+
       // Create score update
       const scoreUpdate: ScoreUpdate = {
-        subdomainId: question.domain.toString(),
+        subdomainId, // FIXED: Now uses the correct subdomain ID
         questionId,
         isCorrect,
         timeSpent,
@@ -89,7 +112,7 @@ export class AdaptiveLearningService {
 
       // Update subdomain score
       const currentSubdomainScore = adaptiveLearningData.subdomainScores[scoreUpdate.subdomainId] || 
-        this.engine.initializeSubdomainScore(scoreUpdate.subdomainId);
+        this.engine.initializeSubdomainScore();
 
       const updatedSubdomainScore = this.engine.updateSubdomainScore(currentSubdomainScore, scoreUpdate);
       
@@ -155,12 +178,24 @@ export class AdaptiveLearningService {
       for (const criterion of criteria) {
         if (selectedQuestions.length >= sessionLength) break;
 
-        // Find matching questions
-        const matchingQuestions = availableQuestions.filter(q => 
-          q.domain.toString() === criterion.subdomainId &&
-          q.difficulty === criterion.difficulty &&
-          !usedQuestionIds.has(q.id)
-        );
+        // FIXED: Find matching questions using field (subdomain) instead of domain
+        const matchingQuestions = availableQuestions.filter(q => {
+          // Map question to subdomain ID using the same logic as updateUserScore
+          let questionSubdomainId: string;
+          
+          if (q.field !== undefined) {
+            questionSubdomainId = q.field.toString();
+          } else {
+            const domainToSubdomainMap: { [key: number]: number } = {
+              0: 0, 1: 8, 2: 18, 3: 31, 4: 37, 5: 40, 6: 43, 7: 45
+            };
+            questionSubdomainId = (domainToSubdomainMap[q.domain] || 0).toString();
+          }
+          
+          return questionSubdomainId === criterion.subdomainId &&
+                 q.difficulty === criterion.difficulty &&
+                 !usedQuestionIds.has(q.id);
+        });
 
         if (matchingQuestions.length > 0) {
           // Select random question from matching ones
@@ -253,7 +288,7 @@ export class AdaptiveLearningService {
     // Initialize all 47 subdomains
     for (let i = 0; i <= 46; i++) {
       const subdomainId = i.toString();
-      subdomainScores[subdomainId] = this.engine.initializeSubdomainScore(subdomainId);
+      subdomainScores[subdomainId] = this.engine.initializeSubdomainScore();
     }
 
     // Calculate domain summaries

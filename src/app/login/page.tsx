@@ -52,30 +52,10 @@ export default function LoginPage() {
           setError(data.error || "Failed to set session token.");
         }
       }
-    } catch (err: any) {
-      // Handle Firebase errors
-      if (err.code) {
-        switch (err.code) {
-          case 'auth/invalid-email':
-            setError('The email address is not valid.');
-            break;
-          case 'auth/user-disabled':
-            setError('This user account has been disabled.');
-            break;
-          case 'auth/user-not-found':
-          case 'auth/wrong-password': // or auth/invalid-credential since Firebase v9.6.0 for login
-            setError('Invalid email or password.');
-            break;
-          case 'auth/invalid-credential': // General invalid credential error
-             setError('Invalid email or password.');
-             break;
-          default:
-            setError("An error occurred during login. Please try again.");
-        }
-      } else {
-        setError(err.message || "An unexpected error occurred.");
-      }
-      console.error("Login error:", err);
+    } catch (error: unknown) {
+      console.error('Error signing in with Google:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -119,7 +99,7 @@ export default function LoginPage() {
         </button>
       </form>
       <p className="mt-4 text-center text-sm text-gray-600">
-        Don't have an account?{" "}
+        Don&apos;t have an account?{" "}
         <a href="/signup" className="text-blue-500 hover:text-blue-600">
           Sign Up
         </a>

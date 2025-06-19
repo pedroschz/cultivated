@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth, app } from '../../lib/firebaseClient';
+import { auth, app } from '@/lib/firebaseClient';
 import { usePracticeSession } from '@/lib/context/PracticeSessionContext';
-import { Question, PracticeSessionDuration } from '@/lib/types/practice';
+import { PracticeSessionDuration, Question } from '@/lib/types/practice';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { 
-  MainLayout, 
+  MainLayout,
   PageHeader,
-  StatCard,
-  TimeCard,
   Card,
   CardContent,
   CardDescription,
@@ -20,6 +18,8 @@ import {
   Button,
   Badge,
   Progress,
+  EmptyState,
+  Loading,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -28,23 +28,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-  EmptyState,
-  Loading,
-  Separator
+  AlertDialogTrigger
 } from '@/components';
 import { 
-  BookOpen, 
-  TrendingUp, 
-  Clock, 
-  Target, 
-  Trophy, 
-  Brain,
-  Calculator,
-  BookText,
-  RotateCcw,
-  Star,
-  Award
+  Clock,
+  Target,
+  BookOpen,
+  Award,
+  TrendingUp,
+  RotateCcw
 } from 'lucide-react';
 import { DOMAIN_NAMES, SUBDOMAIN_NAMES, PERFORMANCE_CATEGORIES } from '@/lib/constants';
 import { toast } from 'sonner';
@@ -114,7 +106,7 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { state, dispatch } = usePracticeSession() as PracticeSessionContextType;
-  const [questions, setQuestions] = useState<Question[]>([]);
+
 
   useEffect(() => {
     // We no longer need to pre-load questions for time-based sessions
@@ -399,39 +391,47 @@ function DashboardContent() {
               <div className="space-y-6">
                 {/* Key Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <StatCard
-                    title="Overall Accuracy"
-                    value={`${userStats.averageAccuracy.toFixed(1)}%`}
-                    icon={Target}
-                    trend={{
-                      value: userStats.averageAccuracy >= 75 ? 5 : -2,
-                      label: "vs target"
-                    }}
-                    badge={{
-                      text: performanceLevel?.label || "Getting Started",
-                      variant: performanceLevel?.label === 'Excellent' ? 'default' : 'secondary'
-                    }}
-                  />
+                  <Card>
+                    <CardContent className="flex items-center justify-between p-6">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Overall Accuracy</p>
+                        <p className="text-2xl font-bold">{userStats.averageAccuracy.toFixed(1)}%</p>
+                      </div>
+                      <Target className="h-8 w-8 text-primary" />
+                    </CardContent>
+                  </Card>
                   
-                  <TimeCard 
-                    minutes={userStats.totalTimeSpent}
-                    label="Study Time"
-                    showHours={true}
-                  />
+                  <Card>
+                    <CardContent className="flex items-center justify-between p-6">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Study Time</p>
+                        <p className="text-2xl font-bold">{Math.floor(userStats.totalTimeSpent / 60)}h {userStats.totalTimeSpent % 60}m</p>
+                      </div>
+                      <Clock className="h-8 w-8 text-primary" />
+                    </CardContent>
+                  </Card>
                   
-                  <StatCard
-                    title="Math Questions"
-                    value={userStats.totalQuestionsAnswered.math}
-                    description={`${Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}% of total`}
-                    icon={Calculator}
-                  />
+                  <Card>
+                    <CardContent className="flex items-center justify-between p-6">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Math Questions</p>
+                        <p className="text-2xl font-bold">{userStats.totalQuestionsAnswered.math}</p>
+                        <p className="text-sm text-muted-foreground">{Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}% of total</p>
+                      </div>
+                      <Target className="h-8 w-8 text-primary" />
+                    </CardContent>
+                  </Card>
                   
-                  <StatCard
-                    title="Reading & Writing"
-                    value={userStats.totalQuestionsAnswered.readingAndWriting}
-                    description={`${Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}% of total`}
-                    icon={BookText}
-                  />
+                  <Card>
+                    <CardContent className="flex items-center justify-between p-6">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Reading & Writing</p>
+                        <p className="text-2xl font-bold">{userStats.totalQuestionsAnswered.readingAndWriting}</p>
+                        <p className="text-sm text-muted-foreground">{Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}% of total</p>
+                      </div>
+                      <BookOpen className="h-8 w-8 text-primary" />
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Progress Visualization */}

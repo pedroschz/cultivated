@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { usePracticeSession, fetchOptimizedQuestion } from '@/lib/context/PracticeSessionContext';
-import { Question } from '@/lib/types/practice';
 import { useRouter } from 'next/navigation';
 import { auth, app } from '@/lib/firebaseClient';
 import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
@@ -26,7 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-  EmptyState,
   Loading,
   Progress
 } from '@/components';
@@ -38,22 +36,19 @@ import {
   HomeIcon,
   FlagIcon,
   BookOpenIcon,
+  ImageIcon,
   TargetIcon,
   Trophy,
   XIcon,
   Clock,
-  Loader2,
-  Mic,
-  MessageSquare,
-  CheckCircle,
-  MicOff
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useVoiceRecording } from '@/lib/hooks/useVoiceRecording';
-import { AutoVoiceRecorder } from '@/components/voice/AutoVoiceRecorder';
-import { CompactVoiceConversation } from '@/components/voice/CompactVoiceConversation';
-import { TutorChat } from '@/components/voice/TutorChat';
+import { useClientSideVoiceRecording } from '@/lib/hooks/useClientSideVoiceRecording';
+import { ClientOnlyAutoVoiceRecorder, ClientOnlyCompactVoiceConversation } from '@/components/voice/ClientOnlyVoiceComponents';
+import { QuestionImage, OptionImage } from '@/components/ui/question-image';
+import { getQuestionImage } from '@/lib/utils/questionHelpers';
 
 function PracticeSession() {
   const { state, dispatch } = usePracticeSession();
@@ -65,11 +60,10 @@ function PracticeSession() {
   const [hasLoadedFirstQuestion, setHasLoadedFirstQuestion] = useState(false);
   const [showTutorChat, setShowTutorChat] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
-  const [transcript, setTranscript] = useState<string>('');
   const router = useRouter();
 
-  // Voice recording hook
-  const voiceRecording = useVoiceRecording();
+  // Voice recording hook - client-side only
+  const voiceRecording = useClientSideVoiceRecording();
 
   // Load first question when session starts
   useEffect(() => {
@@ -179,9 +173,7 @@ function PracticeSession() {
     }
   };
 
-  const handleExitSession = () => {
-    setShowExitConfirm(true);
-  };
+
 
   const confirmExit = () => {
     dispatch({ type: 'RESET_SESSION' });
@@ -566,7 +558,7 @@ function PracticeSession() {
             
             <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowExitConfirm(true)}>
                   <XIcon className="h-3 w-3" />
                   Exit
                 </Button>
@@ -607,7 +599,7 @@ function PracticeSession() {
 
         {/* Auto Voice Recording - Compact Bottom Right Indicator */}
         {!userAnswer && (
-          <AutoVoiceRecorder
+          <ClientOnlyAutoVoiceRecorder
             isRecording={voiceRecording.isRecording}
             isPaused={voiceRecording.isPaused}
             duration={voiceRecording.duration}
@@ -630,9 +622,19 @@ function PracticeSession() {
           {/* Question Column */}
           <div className={cn(
             "space-y-6",
-            currentQuestion.passage && currentQuestion.passage.trim() !== '' 
-              ? "lg:col-span-7" 
-              : "lg:col-span-12"
+            // Adjust column span based on what's shown on the right
+            (() => {
+              const hasPassage = currentQuestion.passage && currentQuestion.passage.trim() !== '';
+              const hasQuestionImage = getQuestionImage(currentQuestion);
+              
+              if (hasPassage && hasQuestionImage) {
+                return "lg:col-span-4"; // Both passage and image - question takes less space
+              } else if (hasPassage || hasQuestionImage) {
+                return "lg:col-span-7"; // Only one of them - question takes medium space
+              } else {
+                return "lg:col-span-12"; // Neither - question takes full width
+              }
+            })()
           )}>
             <Card>
               <CardHeader>
@@ -667,44 +669,52 @@ function PracticeSession() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Question Text */}
+                {/* Question Text - Image moved outside */}
                 <div className="prose prose-lg max-w-none">
                   <p className="text-lg leading-relaxed">{currentQuestion.question}</p>
                 </div>
-
-                {/* Question Image */}
-                {currentQuestion.imageURL && (
-                  <div className="rounded-lg border overflow-hidden">
-                    <img
-                      src={currentQuestion.imageURL}
-                      alt="Question illustration"
-                      className="w-full h-auto"
-                    />
-                  </div>
-                )}
 
                 {/* Answer Section */}
                 {!userAnswer ? (
                   <div className="space-y-4">
                     {Array.isArray(currentQuestion.options) ? (
-                      // Multiple Choice
+                      // Multiple Choice - Enhanced with Image Support
                       <div className="grid gap-3">
-                        {currentQuestion.options.map((option, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            onClick={() => handleMultipleChoiceAnswer(index)}
-                            className="w-full justify-start h-auto p-4 text-left whitespace-normal"
-                            disabled={!!userAnswer}
-                          >
-                            <div className="flex items-start gap-3 w-full">
-                              <div className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 flex items-center justify-center text-xs font-medium">
-                                {String.fromCharCode(65 + index)}
+                        {currentQuestion.options.map((option, index) => {
+                          // Handle both string and QuestionOption formats
+                          const optionText = typeof option === 'string' ? option : option.text || `Option ${String.fromCharCode(65 + index)}`;
+                          const optionImageURL = typeof option === 'string' ? null : option.imageURL;
+                          
+                          return (
+                            <Button
+                              key={index}
+                              variant="outline"
+                              onClick={() => handleMultipleChoiceAnswer(index)}
+                              className={cn(
+                                "w-full justify-start text-left whitespace-normal transition-all duration-200",
+                                optionImageURL ? "h-auto p-3" : "h-auto p-4",
+                                "hover:shadow-md hover:scale-[1.02]"
+                              )}
+                              disabled={!!userAnswer}
+                            >
+                              <div className="flex items-start gap-3 w-full">
+                                <div className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 flex items-center justify-center text-xs font-medium">
+                                  {String.fromCharCode(65 + index)}
+                                </div>
+                                
+                                <div className="flex-1 space-y-2">
+                                  {optionImageURL && (
+                                    <OptionImage 
+                                      image={optionImageURL}
+                                      className="w-full"
+                                    />
+                                  )}
+                                  <span className="block">{optionText}</span>
+                                </div>
                               </div>
-                              <span className="flex-1">{option}</span>
-                            </div>
-                          </Button>
-                        ))}
+                            </Button>
+                          );
+                        })}
                       </div>
                     ) : (
                       // Text Input
@@ -734,22 +744,25 @@ function PracticeSession() {
                     {Array.isArray(currentQuestion.options) ? (
                       // Multiple Choice Results
                       <div className="grid gap-3">
-                        {currentQuestion.options.map((option, index) => (
-                          <Button
-                            key={index}
-                            variant={getOptionVariant(index, userAnswer, Number(currentQuestion.answer))}
-                            className="w-full justify-start h-auto p-4 text-left whitespace-normal"
-                            disabled
-                          >
-                            <div className="flex items-start gap-3 w-full">
-                              <div className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 flex items-center justify-center text-xs font-medium">
-                                {String.fromCharCode(65 + index)}
+                        {currentQuestion.options.map((option, index) => {
+                          const optionText = typeof option === 'string' ? option : option.text || `Option ${String.fromCharCode(65 + index)}`;
+                          return (
+                            <Button
+                              key={index}
+                              variant={getOptionVariant(index, userAnswer, Number(currentQuestion.answer))}
+                              className="w-full justify-start h-auto p-4 text-left whitespace-normal"
+                              disabled
+                            >
+                              <div className="flex items-start gap-3 w-full">
+                                <div className="w-6 h-6 rounded-full border-2 border-current flex-shrink-0 flex items-center justify-center text-xs font-medium">
+                                  {String.fromCharCode(65 + index)}
+                                </div>
+                                <span className="flex-1">{optionText}</span>
+                                {getOptionIcon(index, userAnswer, Number(currentQuestion.answer))}
                               </div>
-                              <span className="flex-1">{option}</span>
-                              {getOptionIcon(index, userAnswer, Number(currentQuestion.answer))}
-                            </div>
-                          </Button>
-                        ))}
+                            </Button>
+                          );
+                        })}
                       </div>
                     ) : (
                       // Text Input Results
@@ -843,9 +856,44 @@ function PracticeSession() {
             </Card>
           </div>
 
+          {/* Question Image Column (if exists) */}
+          {(() => {
+            const questionImage = getQuestionImage(currentQuestion);
+            const hasPassage = currentQuestion.passage && currentQuestion.passage.trim() !== '';
+            
+            return questionImage ? (
+              <div className={cn(
+                hasPassage ? "lg:col-span-4" : "lg:col-span-5"
+              )}>
+                <Card className="h-fit sticky top-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5" />
+                      Question Image
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <QuestionImage 
+                      image={questionImage} 
+                      size="xl" 
+                      priority={true}
+                      aspectRatio="auto"
+                      className="w-full"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null;
+          })()}
+
           {/* Passage Column (if exists) */}
           {currentQuestion.passage && currentQuestion.passage.trim() !== '' && (
-            <div className="lg:col-span-5">
+            <div className={cn(
+              (() => {
+                const hasQuestionImage = getQuestionImage(currentQuestion);
+                return hasQuestionImage ? "lg:col-span-4" : "lg:col-span-5";
+              })()
+            )}>
               <Card className="h-fit sticky top-6">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -867,11 +915,19 @@ function PracticeSession() {
       </div>
 
       {/* AI Tutor Chat - Compact Voice Conversation */}
-      <CompactVoiceConversation
+      <ClientOnlyCompactVoiceConversation
         isOpen={showTutorChat}
         question={{
           question: currentQuestion?.question || '',
-          options: currentQuestion?.options || [],
+          options: (() => {
+            const opts = currentQuestion?.options;
+            if (!opts) return [];
+            if (typeof opts === 'string') return opts;
+            if (Array.isArray(opts)) {
+              return opts.map(opt => typeof opt === 'string' ? opt : opt.text || '');
+            }
+            return [];
+          })(),
           answer: currentQuestion?.answer || '',
           passage: currentQuestion?.passage
         }}

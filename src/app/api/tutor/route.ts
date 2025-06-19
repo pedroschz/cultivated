@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleTranscription(data: { audioBase64: string }) {
+async function handleTranscription(_data: { audioBase64: string }) {
   try {
     // This is a placeholder for audio transcription
     // In production, you'd use Google Speech-to-Text API or similar
@@ -208,4 +208,6 @@ Respond in JSON format:
       }
     );
   }
-} 
+}
+
+ 

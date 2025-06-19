@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { audio } = await request.json();
-
-    // In production, this would send the audio to Gemini Live API
-    // and receive back audio response
+    const body = await request.json();
     
-    // Mock response for now
-    console.log('Received user audio input, sending to Gemini...');
+    // Implement audio processing logic here
+    // const audio = body.audio; // This would be used in actual implementation
     
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    return NextResponse.json({ 
-      success: true,
-      message: 'Audio sent to Gemini for processing'
-    });
-
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Audio sending failed:', error);
+    console.error('Audio processing failed:', error);
     return NextResponse.json(
-      { error: 'Failed to send audio' },
+      { error: 'Failed to process audio' },
       { status: 500 }
     );
   }
