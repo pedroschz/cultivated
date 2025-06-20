@@ -6,7 +6,7 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, app } from '@/lib/firebaseClient';
 import { usePracticeSession } from '@/lib/context/PracticeSessionContext';
 import { PracticeSessionDuration, Question } from '@/lib/types/practice';
-import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { 
   MainLayout,
   PageHeader,
@@ -19,27 +19,26 @@ import {
   Badge,
   Progress,
   EmptyState,
-  Loading,
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
+  Loading
 } from '@/components';
 import { 
   Clock,
   Target,
   BookOpen,
-  Award,
-  TrendingUp,
-  RotateCcw
+  TrendingUp
 } from 'lucide-react';
+import { 
+  ChartContainer, 
+  ChartTooltip, 
+  ChartTooltipContent, 
+  ChartLegend, 
+  ChartLegendContent,
+  type ChartConfig 
+} from '@/components/ui/chart';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { DOMAIN_NAMES, SUBDOMAIN_NAMES, PERFORMANCE_CATEGORIES } from '@/lib/constants';
 import { toast } from 'sonner';
+import { collection, getDocs } from 'firebase/firestore';
 import { SkillMastery } from '@/components/SkillMastery';
 
 // Limited practice durations - only 10 and 20 minutes
@@ -79,6 +78,13 @@ interface UserStats {
   averageAccuracy: number;
 }
 
+interface HistoricalData {
+  date: string;
+  overall: number | null;
+  math: number | null;
+  readingWriting: number | null;
+}
+
 interface DomainData {
   totalCorrect: number;
   totalAnswered: number;
@@ -102,16 +108,11 @@ function DashboardContent() {
   const [userName, setUserName] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
+  const [historicalData, setHistoricalData] = useState<HistoricalData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
   const router = useRouter();
   const { state, dispatch } = usePracticeSession() as PracticeSessionContextType;
-
-
-  useEffect(() => {
-    // We no longer need to pre-load questions for time-based sessions
-    setIsLoading(false);
-  }, []);
 
   useEffect(() => {
     if (!auth) {
@@ -147,9 +148,11 @@ function DashboardContent() {
     async function fetchUserStats() {
       if (!user || !app) {
         console.log('No user or app available, skipping stats fetch');
+        setIsStatsLoading(false);
         return;
       }
       
+      setIsStatsLoading(true);
       console.log('Fetching stats for user:', user.uid);
       const db = getFirestore(app);
       const userRef = doc(db, 'users', user.uid);
@@ -158,6 +161,7 @@ function DashboardContent() {
         const userDoc = await getDoc(userRef);
         if (!userDoc.exists()) {
           console.log('User document does not exist');
+          setIsStatsLoading(false);
           return;
         }
         
@@ -234,35 +238,148 @@ function DashboardContent() {
 
         console.log('Calculated stats:', calculatedStats);
         setUserStats(calculatedStats);
+        
+        // Fetch real historical mastery data from user's practice history
+        const generateRealHistoricalData = async (): Promise<HistoricalData[]> => {
+          try {
+            // Get user's practice history
+            const history = userData.history || [];
+            if (history.length === 0) {
+              // No history yet, return empty array
+              return [];
+            }
+
+            // Fetch questions data to map question IDs to domains
+            const questionsRef = collection(db, 'questions');
+            const questionsSnapshot = await getDocs(questionsRef);
+            const questionsDomainMap: { [questionId: string]: number } = {};
+            
+            questionsSnapshot.docs.forEach(doc => {
+              const questionData = doc.data();
+              questionsDomainMap[doc.id] = questionData.domain;
+            });
+
+            // Group history by date (last 7 days)
+            const now = new Date();
+            const dayGroups: { [dateKey: string]: { 
+              overall: { correct: number; total: number };
+              math: { correct: number; total: number };
+              readingWriting: { correct: number; total: number };
+            }} = {};
+
+            // Initialize last 7 days
+            for (let i = 6; i >= 0; i--) {
+              const date = new Date(now);
+              date.setDate(date.getDate() - i);
+              const dateKey = date.toDateString();
+              dayGroups[dateKey] = {
+                overall: { correct: 0, total: 0 },
+                math: { correct: 0, total: 0 },
+                readingWriting: { correct: 0, total: 0 }
+              };
+            }
+
+            // Process each history entry
+            history.forEach((entry: any) => {
+              const answerDate = new Date(entry.answeredAt);
+              const dateKey = answerDate.toDateString();
+              
+              // Only include data from last 7 days
+              if (dayGroups[dateKey]) {
+                const questionDomain = questionsDomainMap[entry.questionId];
+                const isCorrect = entry.correct;
+                
+                // Update overall stats
+                dayGroups[dateKey].overall.total++;
+                if (isCorrect) dayGroups[dateKey].overall.correct++;
+                
+                // Update domain-specific stats
+                if (questionDomain !== undefined) {
+                  if (questionDomain >= 0 && questionDomain <= 3) {
+                    // Math domains (0-3)
+                    dayGroups[dateKey].math.total++;
+                    if (isCorrect) dayGroups[dateKey].math.correct++;
+                  } else if (questionDomain >= 4 && questionDomain <= 7) {
+                    // Reading & Writing domains (4-7)
+                    dayGroups[dateKey].readingWriting.total++;
+                    if (isCorrect) dayGroups[dateKey].readingWriting.correct++;
+                  }
+                }
+              }
+            });
+
+                         // Convert to chart data format
+             const data: HistoricalData[] = [];
+             const todayKey = now.toDateString();
+             
+             for (let i = 6; i >= 0; i--) {
+               const date = new Date(now);
+               date.setDate(date.getDate() - i);
+               const dateKey = date.toDateString();
+               const dayData = dayGroups[dateKey];
+               const isToday = dateKey === todayKey;
+               
+               let overallAccuracy: number | null;
+               let mathAccuracy: number | null;
+               let rwAccuracy: number | null;
+               
+               if (isToday) {
+                 // For today, use current overall mastery level from calculated stats
+                 overallAccuracy = Math.round(calculatedStats.averageAccuracy);
+                 
+                 // For math and R&W today, use current domain-specific accuracy if available
+                 const mathDomainStats = Object.values(stats.math || {}).flatMap(field => Object.values(field));
+                 const rwDomainStats = Object.values(stats.readingAndWriting || {}).flatMap(field => Object.values(field));
+                 
+                 const mathTotalCorrect = mathDomainStats.reduce((sum, domain) => sum + (domain.totalCorrect || 0), 0);
+                 const mathTotalAnswered = mathDomainStats.reduce((sum, domain) => sum + (domain.totalAnswered || 0), 0);
+                 mathAccuracy = mathTotalAnswered > 0 ? Math.round((mathTotalCorrect / mathTotalAnswered) * 100) : null;
+                 
+                 const rwTotalCorrect = rwDomainStats.reduce((sum, domain) => sum + (domain.totalCorrect || 0), 0);
+                 const rwTotalAnswered = rwDomainStats.reduce((sum, domain) => sum + (domain.totalAnswered || 0), 0);
+                 rwAccuracy = rwTotalAnswered > 0 ? Math.round((rwTotalCorrect / rwTotalAnswered) * 100) : null;
+               } else {
+                 // For past days, use historical daily data
+                 overallAccuracy = dayData.overall.total > 0 ? 
+                   Math.round((dayData.overall.correct / dayData.overall.total) * 100) : null;
+                 mathAccuracy = dayData.math.total > 0 ? 
+                   Math.round((dayData.math.correct / dayData.math.total) * 100) : null;
+                 rwAccuracy = dayData.readingWriting.total > 0 ? 
+                   Math.round((dayData.readingWriting.correct / dayData.readingWriting.total) * 100) : null;
+               }
+               
+               data.push({
+                 date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                 overall: overallAccuracy,
+                 math: mathAccuracy,
+                 readingWriting: rwAccuracy,
+               });
+             }
+
+            return data;
+          } catch (error) {
+            console.error('Error generating historical data:', error);
+            return [];
+          }
+        };
+        
+        const historicalData = await generateRealHistoricalData();
+        setHistoricalData(historicalData);
+        setIsStatsLoading(false);
 
       } catch (error) {
         console.error('Error fetching user stats:', error);
         toast.error('Failed to load your statistics');
-      }
-    }
-
-    async function checkPremiumStatus() {
-      if (!user || !app) {
-        return;
-      }
-      
-      const db = getFirestore(app);
-      const userRef = doc(db, 'users', user.uid);
-      
-      try {
-        const userDoc = await getDoc(userRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setIsPremium(userData.premium === true);
-        }
-      } catch (error) {
-        console.error('Error checking premium status:', error);
+        setIsStatsLoading(false);
       }
     }
 
     if (user) {
       fetchUserStats();
-      checkPremiumStatus();
+    } else {
+      // Reset stats when user logs out
+      setUserStats(null);
+      setIsStatsLoading(false);
     }
   }, [user]);
 
@@ -278,24 +395,7 @@ function DashboardContent() {
     router.push('/practice');
   };
 
-  const handleResetHistory = async () => {
-    if (!user || !app) return;
 
-    try {
-      const db = getFirestore(app);
-      const userRef = doc(db, 'users', user.uid);
-      
-      await updateDoc(userRef, {
-        stats: {}
-      });
-      
-      setUserStats(null);
-      toast.success('Practice history reset successfully');
-    } catch (error) {
-      console.error('Error resetting history:', error);
-      toast.error('Failed to reset practice history');
-    }
-  };
 
   const getPerformanceLevel = (accuracy: number) => {
     if (accuracy >= PERFORMANCE_CATEGORIES.EXCELLENT.min) return PERFORMANCE_CATEGORIES.EXCELLENT;
@@ -304,11 +404,11 @@ function DashboardContent() {
     return PERFORMANCE_CATEGORIES.NEEDS_IMPROVEMENT;
   };
 
-  if (isLoading) {
+  if (isLoading || (user && isStatsLoading)) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <Loading size="lg" text="Loading your dashboard..." />
+          <Loading size="lg" text={isLoading ? "Loading your dashboard..." : "Loading your statistics..."} />
         </div>
       </MainLayout>
     );
@@ -317,6 +417,22 @@ function DashboardContent() {
   const totalQuestions = userStats ? (userStats.totalQuestionsAnswered.math + userStats.totalQuestionsAnswered.readingAndWriting) : 0;
   const hasStats = userStats && totalQuestions > 0;
   const performanceLevel = hasStats ? getPerformanceLevel(userStats.averageAccuracy) : null;
+
+  // Chart configuration
+  const chartConfig: ChartConfig = {
+    overall: {
+      label: "Overall",
+      color: "hsl(220, 15%, 50%)", // Medium gray
+    },
+    math: {
+      label: "Math", 
+      color: "hsl(0, 80%, 60%)", // Vibrant red
+    },
+    readingWriting: {
+      label: "Reading & Writing",
+      color: "hsl(210, 80%, 55%)", // Vibrant blue
+    },
+  };
 
   return (
     <MainLayout maxWidth="full">
@@ -389,50 +505,172 @@ function DashboardContent() {
               />
             ) : (
               <div className="space-y-6">
-                {/* Key Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Key Stats - Single Row */}
                   <Card>
-                    <CardContent className="flex items-center justify-between p-6">
-                      <div>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border p-6">
+                    <div className="pb-6 sm:pb-0 sm:pr-6">
+                      <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">Overall Accuracy</p>
-                        <p className="text-2xl font-bold">{userStats.averageAccuracy.toFixed(1)}%</p>
+                        <p className="text-2xl font-bold leading-none">{userStats.averageAccuracy.toFixed(1)}%</p>
                       </div>
-                      <Target className="h-8 w-8 text-primary" />
-                    </CardContent>
-                  </Card>
+                    </div>
                   
-                  <Card>
-                    <CardContent className="flex items-center justify-between p-6">
-                      <div>
+                    <div className="py-6 sm:py-0 sm:px-6">
+                      <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">Study Time</p>
-                        <p className="text-2xl font-bold">{Math.floor(userStats.totalTimeSpent / 60)}h {userStats.totalTimeSpent % 60}m</p>
+                        <p className="text-2xl font-bold leading-none">{Math.floor(userStats.totalTimeSpent / 60)}h {userStats.totalTimeSpent % 60}m</p>
                       </div>
-                      <Clock className="h-8 w-8 text-primary" />
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="flex items-center justify-between p-6">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Math Questions</p>
-                        <p className="text-2xl font-bold">{userStats.totalQuestionsAnswered.math}</p>
-                        <p className="text-sm text-muted-foreground">{Math.round((userStats.totalQuestionsAnswered.math / totalQuestions) * 100)}% of total</p>
+                    </div>
+                    
+                    <div className="py-6 sm:py-0 sm:px-6">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Math</p>
+                        <p className="text-2xl font-bold leading-none">{userStats.totalQuestionsAnswered.math} q.</p>
                       </div>
-                      <Target className="h-8 w-8 text-primary" />
-                    </CardContent>
-                  </Card>
+                    </div>
                   
-                  <Card>
-                    <CardContent className="flex items-center justify-between p-6">
-                      <div>
+                    <div className="pt-6 sm:pt-0 sm:pl-6">
+                      <div className="space-y-1">
                         <p className="text-sm font-medium text-muted-foreground">Reading & Writing</p>
-                        <p className="text-2xl font-bold">{userStats.totalQuestionsAnswered.readingAndWriting}</p>
-                        <p className="text-sm text-muted-foreground">{Math.round((userStats.totalQuestionsAnswered.readingAndWriting / totalQuestions) * 100)}% of total</p>
+                        <p className="text-2xl font-bold leading-none">{userStats.totalQuestionsAnswered.readingAndWriting} q.</p>
                       </div>
-                      <BookOpen className="h-8 w-8 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Historical Mastery Chart */}
+                {historicalData.length > 0 && historicalData.some(d => d.overall !== null || d.math !== null || d.readingWriting !== null) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Mastery Progress (Last 7 Days)
+                      </CardTitle>
+                      <CardDescription>
+                        Track your accuracy improvement across subjects
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                                          <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                        <LineChart data={historicalData} margin={{ top: 30, right: 40, left: 30, bottom: 30 }}>
+                          <defs>
+                            <linearGradient id="overallGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(220, 15%, 50%)" stopOpacity={0.25}/>
+                              <stop offset="50%" stopColor="hsl(220, 15%, 50%)" stopOpacity={0.08}/>
+                              <stop offset="100%" stopColor="hsl(220, 15%, 50%)" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="mathGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(0, 80%, 60%)" stopOpacity={0.2}/>
+                              <stop offset="50%" stopColor="hsl(0, 80%, 60%)" stopOpacity={0.08}/>
+                              <stop offset="100%" stopColor="hsl(0, 80%, 60%)" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="readingWritingGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(210, 80%, 55%)" stopOpacity={0.2}/>
+                              <stop offset="50%" stopColor="hsl(210, 80%, 55%)" stopOpacity={0.08}/>
+                              <stop offset="100%" stopColor="hsl(210, 80%, 55%)" stopOpacity={0}/>
+                            </linearGradient>
+                            
+                            {/* Glow effects */}
+                            <filter id="glow">
+                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                              <feMerge> 
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
+                          </defs>
+                          <CartesianGrid 
+                            strokeDasharray="2 4" 
+                            stroke="hsl(var(--border))" 
+                            strokeOpacity={0.3}
+                            vertical={false}
+                          />
+                          <XAxis 
+                            dataKey="date" 
+                            tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickMargin={12}
+                            className="text-xs"
+                          />
+                          <YAxis 
+                            domain={[0, 100]}
+                            tick={{ fontSize: 14, fill: "hsl(var(--muted-foreground))" }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickMargin={12}
+                            width={40}
+                            label={{ 
+                              value: 'Accuracy (%)', 
+                              angle: -90, 
+                              position: 'insideLeft',
+                              style: { 
+                                textAnchor: 'middle', 
+                                fontSize: '15px', 
+                                fill: 'hsl(var(--muted-foreground))',
+                                fontWeight: '500'
+                              },
+                              dx: -30
+                            }}
+                          />
+                          <ChartTooltip 
+                            content={
+                              <ChartTooltipContent 
+                                labelFormatter={(value) => value}
+                                formatter={(value, name) => [
+                                  `${value}%`,
+                                  chartConfig[name as keyof typeof chartConfig]?.label || name
+                                ]}
+                                className="rounded-xl border border-border/20 bg-background/80 backdrop-blur-md shadow-2xl ring-1 ring-white/10"
+                              />
+                            }
+                          />
+                          <ChartLegend 
+                            content={<ChartLegendContent className="justify-center pt-6 gap-6" />} 
+                          />
+                          
+                          {/* Lines */}
+                          <Line
+                            type="monotone"
+                            dataKey="overall"
+                            stroke="hsl(220, 15%, 50%)"
+                            strokeWidth={4}
+                            strokeOpacity={1}
+                            dot={false}
+                            connectNulls={false}
+                            activeDot={false}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="math"
+                            stroke="hsl(0, 80%, 60%)"
+                            strokeWidth={4}
+                            strokeOpacity={1}
+                            dot={false}
+                            connectNulls={false}
+                            activeDot={false}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="readingWriting"
+                            stroke="hsl(210, 80%, 55%)"
+                            strokeWidth={4}
+                            strokeOpacity={1}
+                            dot={false}
+                            connectNulls={false}
+                            activeDot={false}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </LineChart>
+                      </ChartContainer>
                     </CardContent>
                   </Card>
-                </div>
+                )}
 
                 {/* Progress Visualization */}
                 <Card>
@@ -463,45 +701,7 @@ function DashboardContent() {
             )}
           </div>
 
-          {/* Premium Features */}
-          {isPremium && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-yellow-600" />
-                  Premium Features
-                </CardTitle>
-                <CardDescription>
-                  Advanced tools to accelerate your SAT preparation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="gap-2">
-                      <RotateCcw className="h-4 w-4" />
-                      Reset History
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Reset Practice History</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete all your practice statistics and progress. 
-                        This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleResetHistory}>
-                        Reset History
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
 
         {/* Right Column - Skills Only */}

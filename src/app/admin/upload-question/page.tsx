@@ -21,13 +21,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-// Admin page constants
-const ALLOWED_EMAILS = [
-  'pedrosanchezgilg@icloud.com'
-];
+// Admin access code (simple access control)
+const ADMIN_ACCESS_CODE = '203q948cijor';
 
 export default function UploadQuestionPage() {
   const [user, setUser] = useState<User | null>(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessCode, setAccessCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [questionData, setQuestionData] = useState({
@@ -62,7 +62,15 @@ export default function UploadQuestionPage() {
       }
     }, []);
   
-    // Auth check
+    // Check for saved access on component mount
+  useEffect(() => {
+    const savedAccess = localStorage.getItem('admin-upload-access');
+    if (savedAccess === 'granted') {
+      setHasAccess(true);
+    }
+  }, []);
+
+  // Auth check (simplified - just need to be logged in)
   useEffect(() => {
     if (!auth) return;
     
@@ -70,23 +78,26 @@ export default function UploadQuestionPage() {
       setUser(currentUser);
       if (!currentUser) {
         router.push('/login');
-      } else {
-        // Optional: Whitelist specific team members
-        const authorizedEmails = [
-          'pedrosanchezgilg@icloud.com'
-          // Add your team's email addresses here
-        ];
-        
-        if (currentUser.email && !authorizedEmails.includes(currentUser.email)) {
-          toast.error('You are not authorized to access this page');
-          router.push('/dashboard');
-          return;
-        }
       }
     });
 
     return () => unsubscribe();
   }, [router]);
+
+  // Handle access code submission
+  const handleAccessCodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (accessCode === ADMIN_ACCESS_CODE) {
+      setHasAccess(true);
+      localStorage.setItem('admin-upload-access', 'granted');
+      toast.success('Access granted!');
+      setAccessCode(''); // Clear the input
+    } else {
+      toast.error('Invalid access code');
+      setAccessCode('');
+    }
+  };
 
   // Image preview handling
   const handleQuestionImageChange = (file: File | null) => {
@@ -325,13 +336,63 @@ export default function UploadQuestionPage() {
     );
   }
 
+  if (!hasAccess) {
+    return (
+      <div className="container mx-auto py-8 max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Admin Access Required
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAccessCodeSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="access-code">Enter Access Code</Label>
+                <Input
+                  id="access-code"
+                  type="password"
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                  placeholder="Enter access code..."
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Submit
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Clear admin access
+  const clearAccess = () => {
+    setHasAccess(false);
+    localStorage.removeItem('admin-upload-access');
+    toast.info('Admin access cleared');
+  };
+
   return (
     <div className="container mx-auto py-8 max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Upload Questions with Images
+          <CardTitle className="flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Upload Questions with Images
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearAccess}
+              className="text-xs"
+            >
+              Clear Access
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>

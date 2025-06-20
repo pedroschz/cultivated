@@ -35,6 +35,7 @@ export { ScrollArea, ScrollBar } from "./ui/scroll-area";
 export { Calendar } from "./ui/calendar";
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "./ui/table";
 export { Toaster } from "./ui/sonner";
+export { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "./ui/chart";
 
 // Voice Components
 export { VoiceRecorder } from "./voice/VoiceRecorder";
