@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/api-auth';
 
+// No static paths to pre-render for this dynamic API route.
+// In static-export mode the route is served via Firebase Functions.
+export function generateStaticParams() {
+  return [];
+}
+
 /**
  * Polls the status of an AssemblyAI transcription job by id.
  */

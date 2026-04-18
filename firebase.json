@@ -46,6 +46,34 @@
         }
       },
       {
+        "source": "/api/assemblyai/upload",
+        "function": { "functionId": "assemblyaiUpload" }
+      },
+      {
+        "source": "/api/assemblyai/transcript",
+        "function": { "functionId": "assemblyaiTranscript" }
+      },
+      {
+        "source": "/api/assemblyai/transcript/:id",
+        "function": { "functionId": "assemblyaiTranscriptPoll" }
+      },
+      {
+        "source": "/api/gemini/generate",
+        "function": { "functionId": "geminiGenerate" }
+      },
+      {
+        "source": "/api/gemini/live-token",
+        "function": { "functionId": "geminiLiveToken" }
+      },
+      {
+        "source": "/api/interests/chat",
+        "function": { "functionId": "interestsChatApi" }
+      },
+      {
+        "source": "/api/blog/autofill",
+        "function": { "functionId": "blogAutofill" }
+      },
+      {
         "source": "/api/chat",
         "function": {
           "functionId": "chatApi"
