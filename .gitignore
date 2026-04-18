@@ -60,3 +60,6 @@ private-assets/
 
 # llms.txt is deploy-specific (contains absolute URLs to deployed instance)
 /public/llms.txt
+
+# Local Firebase project config (set your project with `firebase use --add`)
+.firebaserc

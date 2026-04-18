@@ -1,6 +1,0 @@
-{
-  "_comment": "Replace 'your-firebase-project-id' with your Firebase project ID, or run `firebase use --add` to configure interactively.",
-  "projects": {
-    "default": "your-firebase-project-id"
-  }
-}
