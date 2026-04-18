@@ -8,7 +8,7 @@
 
 ---
 
-## ✨ What's inside
+## What's inside
 
 - **Adaptive learning engine** — picks the next question based on per-skill mastery scores, recency, difficulty, and confidence.
 - **Voice AI tutor** — real-time conversational tutor powered by Google Gemini Live + AssemblyAI transcription.
@@ -21,7 +21,7 @@ A companion **mobile app** (Expo / React Native) lives under [`apps/mobile/`](./
 
 ---
 
-## 🚀 Quickstart
+## Quickstart
 
 ```bash
 git clone https://github.com/<your-fork>/cultivated.git
@@ -35,7 +35,7 @@ You'll need a Firebase project and API keys for Gemini, AssemblyAI, and (optiona
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 | Doc | What's in it |
 |---|---|
@@ -50,7 +50,7 @@ You'll need a Firebase project and API keys for Gemini, AssemblyAI, and (optiona
 
 ---
 
-## 🧰 Tech stack
+## Tech stack
 
 - **Next.js 15** (App Router) + **TypeScript** + **Tailwind CSS** + **Radix UI**
 - **Firebase**: Authentication, Firestore, Storage, Cloud Functions, Hosting
@@ -62,7 +62,7 @@ See [`package.json`](./package.json) and [`functions/package.json`](./functions/
 
 ---
 
-## 🗂️ Project structure (high level)
+## Project structure
 
 <details>
 <summary>Click to expand</summary>
@@ -89,7 +89,7 @@ cultivated/
 
 ---
 
-## 🔤 Brand fonts
+## Brand fonts
 
 The deployed site uses two commercial fonts — **DIN Round Pro** and **Brasley** — that are **not** included in this repository for licensing reasons. The default OSS build falls back to **Inter** (Google Fonts) and looks clean.
 
@@ -105,19 +105,20 @@ If you have valid licenses for those fonts:
    private-assets/fonts/DIN Round Pro/dinroundpro_black.otf
    ```
 2. Run `npm run setup:fonts` (also runs automatically inside `deploy.sh`).
-3. Swap the font setup in [`src/app/layout.tsx`](./src/app/layout.tsx) using the snippet in [`src/app/layout.brand-fonts.tsx.example`](./src/app/layout.brand-fonts.tsx.example).
+
+`deploy.sh` detects the copied font files and automatically patches `layout.tsx` to use `localFont()` for the production build, then restores the OSS Inter fallback afterwards — the repository stays clean.
 
 The `private-assets/` directory and the copied `public/` font paths are gitignored.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Pull requests welcome! See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for setup, conventions, and the PR checklist. If you're reporting a security issue, please follow [`SECURITY.md`](./SECURITY.md) instead of opening a public issue.
 
 ---
 
-## 📝 License
+## License
 
 Licensed under the [Apache License, Version 2.0](./LICENSE). See [`NOTICE`](./NOTICE) for attribution and trademark notes.
 

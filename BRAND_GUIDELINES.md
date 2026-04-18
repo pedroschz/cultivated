@@ -41,15 +41,15 @@ CultivatED is a free SAT preparation platform that makes test prep engaging, acc
 **CultivatED** (always capitalize the "ED")
 
 **Correct Usage:**
-- ✅ CultivatED
-- ✅ CultivatED Platform
-- ✅ CultivatED for Schools
+- Yes: CultivatED
+- Yes: CultivatED Platform
+- Yes: CultivatED for Schools
 
 **Incorrect Usage:**
-- ❌ Cultivated
-- ❌ CultivateED
-- ❌ cultivated
-- ❌ CultivatEd
+- No: Cultivated
+- No: CultivateED
+- No: cultivated
+- No: CultivatEd
 
 ### Tagline
 **Primary Tagline:**
@@ -176,20 +176,20 @@ This 3D effect creates a **game-like aesthetic** that:
 #### When to Use the 3D Effect
 
 **DO use 3D effect for:**
-- ✅ Primary action buttons (main CTAs)
-- ✅ Secondary action buttons
-- ✅ Outline buttons (with appropriate border colors)
-- ✅ Important form submission buttons
-- ✅ Navigation buttons that lead to key actions
-- ✅ Any button that represents a significant user action
+- Yes: Primary action buttons (main CTAs)
+- Yes: Secondary action buttons
+- Yes: Outline buttons (with appropriate border colors)
+- Yes: Important form submission buttons
+- Yes: Navigation buttons that lead to key actions
+- Yes: Any button that represents a significant user action
 
 **DON'T use 3D effect for:**
-- ❌ Ghost buttons (they're intentionally flat)
-- ❌ Link buttons (they use underline instead)
-- ❌ Icon-only buttons without text
-- ❌ Disabled buttons
-- ❌ Text links
-- ❌ Decorative elements
+- No: Ghost buttons (they're intentionally flat)
+- No: Link buttons (they use underline instead)
+- No: Icon-only buttons without text
+- No: Disabled buttons
+- No: Text links
+- No: Decorative elements
 
 #### Color-Specific Implementation
 
@@ -297,18 +297,18 @@ The 3D effect works in harmony with other design elements:
 #### Best Practices
 
 **DO:**
-- ✅ Use consistent border thickness ratios (2px sides, 4px bottom)
-- ✅ Maintain darker bottom border color (~20% darker)
-- ✅ Keep transitions smooth and quick
-- ✅ Use appropriate sizing (larger buttons = more depth)
-- ✅ Test on different devices and screen sizes
+- Yes: Use consistent border thickness ratios (2px sides, 4px bottom)
+- Yes: Maintain darker bottom border color (~20% darker)
+- Yes: Keep transitions smooth and quick
+- Yes: Use appropriate sizing (larger buttons = more depth)
+- Yes: Test on different devices and screen sizes
 
 **DON'T:**
-- ❌ Mix 3D effects with flat buttons inconsistently
-- ❌ Use bottom borders that are too thick (>6px looks unnatural)
-- ❌ Forget to reduce border on active state
-- ❌ Use 3D effect on elements that aren't interactive
-- ❌ Overuse the effect (reserve for important actions)
+- No: Mix 3D effects with flat buttons inconsistently
+- No: Use bottom borders that are too thick (>6px looks unnatural)
+- No: Forget to reduce border on active state
+- No: Use 3D effect on elements that aren't interactive
+- No: Overuse the effect (reserve for important actions)
 
 #### The Emotional Impact
 
@@ -516,18 +516,18 @@ font-family: var(--font-din), sans-serif;
 ### Color Usage Guidelines
 
 **DO:**
-- ✅ Use Mask Green for primary actions and success states
-- ✅ Use Macaw Blue for secondary actions and links
-- ✅ Use Cardinal Red sparingly for errors and destructive actions
-- ✅ Maintain sufficient contrast ratios (WCAG AA minimum)
-- ✅ Use neutral colors for backgrounds and text hierarchy
+- Yes: Use Mask Green for primary actions and success states
+- Yes: Use Macaw Blue for secondary actions and links
+- Yes: Use Cardinal Red sparingly for errors and destructive actions
+- Yes: Maintain sufficient contrast ratios (WCAG AA minimum)
+- Yes: Use neutral colors for backgrounds and text hierarchy
 
 **DON'T:**
-- ❌ Use primary colors for large background areas
-- ❌ Mix color meanings (e.g., don't use red for success)
-- ❌ Use colors that aren't in the palette
-- ❌ Use low-contrast color combinations
-- ❌ Overuse vibrant colors (balance with neutrals)
+- No: Use primary colors for large background areas
+- No: Mix color meanings (e.g., don't use red for success)
+- No: Use colors that aren't in the palette
+- No: Use low-contrast color combinations
+- No: Overuse vibrant colors (balance with neutrals)
 
 ---
 
@@ -761,18 +761,18 @@ The shadow and border work together—the shadow extends the visual depth create
 ### Voice Characteristics
 
 **We are:**
-- ✅ Enthusiastic but not over-the-top
-- ✅ Helpful but not pushy
-- ✅ Professional but not stuffy
-- ✅ Friendly but not casual to a fault
-- ✅ Clear but not oversimplified
+- Yes: Enthusiastic but not over-the-top
+- Yes: Helpful but not pushy
+- Yes: Professional but not stuffy
+- Yes: Friendly but not casual to a fault
+- Yes: Clear but not oversimplified
 
 **We are NOT:**
-- ❌ Overly academic or pretentious
-- ❌ Condescending or patronizing
-- ❌ Corporate or soulless
-- ❌ Overly casual or unprofessional
-- ❌ Vague or wishy-washy
+- No: Overly academic or pretentious
+- No: Condescending or patronizing
+- No: Corporate or soulless
+- No: Overly casual or unprofessional
+- No: Vague or wishy-washy
 
 ### Tone by Context
 
@@ -822,18 +822,18 @@ The shadow and border work together—the shadow extends the visual depth create
 #### Word Choice
 
 **Use:**
-- ✅ Simple, everyday words
-- ✅ Action verbs
-- ✅ Specific numbers
-- ✅ Contractions
-- ✅ "You" and "we"
+- Yes: Simple, everyday words
+- Yes: Action verbs
+- Yes: Specific numbers
+- Yes: Contractions
+- Yes: "You" and "we"
 
 **Avoid:**
-- ❌ Jargon or technical terms
-- ❌ Passive voice
-- ❌ Vague qualifiers ("very", "really", "quite")
-- ❌ Corporate buzzwords ("leverage", "synergy", "optimize")
-- ❌ Academic language ("utilize", "facilitate", "implement")
+- No: Jargon or technical terms
+- No: Passive voice
+- No: Vague qualifiers ("very", "really", "quite")
+- No: Corporate buzzwords ("leverage", "synergy", "optimize")
+- No: Academic language ("utilize", "facilitate", "implement")
 
 **Examples:**
 
@@ -982,124 +982,124 @@ The shadow and border work together—the shadow extends the visual depth create
 ### Brand Name
 
 **DO:**
-- ✅ Always capitalize "CultivatED" (capital E and D)
-- ✅ Use the full name on first reference
-- ✅ Use "CultivatED" consistently across all materials
+- Yes: Always capitalize "CultivatED" (capital E and D)
+- Yes: Use the full name on first reference
+- Yes: Use "CultivatED" consistently across all materials
 
 **DON'T:**
-- ❌ Write "Cultivated" or "cultivated"
-- ❌ Abbreviate to "CE" or "Cult"
-- ❌ Use variations like "CultivateED" or "CultivatEd"
+- No: Write "Cultivated" or "cultivated"
+- No: Abbreviate to "CE" or "Cult"
+- No: Use variations like "CultivateED" or "CultivatEd"
 
 ### Design
 
 **DO:**
-- ✅ Use Feather Green for primary actions
-- ✅ Maintain consistent border radius (rounded-2xl for most elements)
-- ✅ Use 3D button effects for primary CTAs
-- ✅ Keep spacing consistent (gap-4, gap-6, gap-8)
-- ✅ Use uppercase for buttons and labels
-- ✅ Maintain sufficient color contrast
-- ✅ Use shadows sparingly and consistently
+- Yes: Use Feather Green for primary actions
+- Yes: Maintain consistent border radius (rounded-2xl for most elements)
+- Yes: Use 3D button effects for primary CTAs
+- Yes: Keep spacing consistent (gap-4, gap-6, gap-8)
+- Yes: Use uppercase for buttons and labels
+- Yes: Maintain sufficient color contrast
+- Yes: Use shadows sparingly and consistently
 
 **DON'T:**
-- ❌ Mix different border radius sizes arbitrarily
-- ❌ Use flat buttons for primary actions
-- ❌ Overuse vibrant colors
-- ❌ Create custom colors outside the palette
-- ❌ Use low-contrast text
-- ❌ Mix design patterns (stick to the system)
+- No: Mix different border radius sizes arbitrarily
+- No: Use flat buttons for primary actions
+- No: Overuse vibrant colors
+- No: Create custom colors outside the palette
+- No: Use low-contrast text
+- No: Mix design patterns (stick to the system)
 
 ### Typography
 
 **DO:**
-- ✅ Use DIN Round Pro for all text
-- ✅ Use font-black for hero headlines
-- ✅ Use font-bold for section headlines and CTAs
-- ✅ Use uppercase for buttons and navigation
-- ✅ Use tracking-wider for uppercase text
-- ✅ Maintain clear hierarchy (h1 > h2 > h3 > body)
+- Yes: Use DIN Round Pro for all text
+- Yes: Use font-black for hero headlines
+- Yes: Use font-bold for section headlines and CTAs
+- Yes: Use uppercase for buttons and navigation
+- Yes: Use tracking-wider for uppercase text
+- Yes: Maintain clear hierarchy (h1 > h2 > h3 > body)
 
 **DON'T:**
-- ❌ Use other fonts (no Arial, Helvetica, etc.)
-- ❌ Mix font weights arbitrarily
-- ❌ Use lowercase for buttons
-- ❌ Create custom font sizes outside the scale
-- ❌ Use all caps for body text
+- No: Use other fonts (no Arial, Helvetica, etc.)
+- No: Mix font weights arbitrarily
+- No: Use lowercase for buttons
+- No: Create custom font sizes outside the scale
+- No: Use all caps for body text
 
 ### Copy
 
 **DO:**
-- ✅ Write in second person ("you", "your")
-- ✅ Use contractions ("you'll", "it's", "we're")
-- ✅ Keep sentences short and clear
-- ✅ Use active voice
-- ✅ Be specific with numbers ("200 points" not "significant improvement")
-- ✅ Focus on benefits, not features
-- ✅ Use action verbs in CTAs
+- Yes: Write in second person ("you", "your")
+- Yes: Use contractions ("you'll", "it's", "we're")
+- Yes: Keep sentences short and clear
+- Yes: Use active voice
+- Yes: Be specific with numbers ("200 points" not "significant improvement")
+- Yes: Focus on benefits, not features
+- Yes: Use action verbs in CTAs
 
 **DON'T:**
-- ❌ Use passive voice ("Your score was improved" → "Your score improved")
-- ❌ Use jargon or technical terms unnecessarily
-- ❌ Write long, complex sentences
-- ❌ Use vague language ("very good" → "great")
-- ❌ Use corporate buzzwords ("leverage", "synergy")
-- ❌ Write in third person ("users" → "you")
-- ❌ Use generic CTAs ("Click here" → "START PRACTICING")
+- No: Use passive voice ("Your score was improved" → "Your score improved")
+- No: Use jargon or technical terms unnecessarily
+- No: Write long, complex sentences
+- No: Use vague language ("very good" → "great")
+- No: Use corporate buzzwords ("leverage", "synergy")
+- No: Write in third person ("users" → "you")
+- No: Use generic CTAs ("Click here" → "START PRACTICING")
 
 ### Tone
 
 **DO:**
-- ✅ Be encouraging and supportive
-- ✅ Celebrate progress and achievements
-- ✅ Acknowledge challenges without dwelling
-- ✅ Write conversationally
-- ✅ Show enthusiasm appropriately
-- ✅ Be helpful and solution-oriented
+- Yes: Be encouraging and supportive
+- Yes: Celebrate progress and achievements
+- Yes: Acknowledge challenges without dwelling
+- Yes: Write conversationally
+- Yes: Show enthusiasm appropriately
+- Yes: Be helpful and solution-oriented
 
 **DON'T:**
-- ❌ Be condescending or patronizing
-- ❌ Use overly formal language
-- ❌ Be negative or discouraging
-- ❌ Use corporate speak
-- ❌ Be overly casual or unprofessional
-- ❌ Blame users for mistakes
+- No: Be condescending or patronizing
+- No: Use overly formal language
+- No: Be negative or discouraging
+- No: Use corporate speak
+- No: Be overly casual or unprofessional
+- No: Blame users for mistakes
 
 ### Content
 
 **DO:**
-- ✅ Emphasize that CultivatED is free
-- ✅ Highlight specific results ("200+ points", "340+ students")
-- ✅ Use testimonials with real names and contexts
-- ✅ Focus on outcomes, not just features
-- ✅ Provide clear next steps
-- ✅ Use examples and concrete details
+- Yes: Emphasize that CultivatED is free
+- Yes: Highlight specific results ("200+ points", "340+ students")
+- Yes: Use testimonials with real names and contexts
+- Yes: Focus on outcomes, not just features
+- Yes: Provide clear next steps
+- Yes: Use examples and concrete details
 
 **DON'T:**
-- ❌ Hide the fact that it's free
-- ❌ Use vague claims ("many students", "some users")
-- ❌ Focus only on features without benefits
-- ❌ Leave users wondering what to do next
-- ❌ Use generic testimonials
-- ❌ Make unsupported claims
+- No: Hide the fact that it's free
+- No: Use vague claims ("many students", "some users")
+- No: Focus only on features without benefits
+- No: Leave users wondering what to do next
+- No: Use generic testimonials
+- No: Make unsupported claims
 
 ### UI/UX
 
 **DO:**
-- ✅ Make CTAs prominent and clear
-- ✅ Provide feedback for all actions
-- ✅ Use progress indicators
-- ✅ Show success states clearly
-- ✅ Handle errors gracefully
-- ✅ Maintain consistent patterns
+- Yes: Make CTAs prominent and clear
+- Yes: Provide feedback for all actions
+- Yes: Use progress indicators
+- Yes: Show success states clearly
+- Yes: Handle errors gracefully
+- Yes: Maintain consistent patterns
 
 **DON'T:**
-- ❌ Hide important actions
-- ❌ Leave users guessing
-- ❌ Use inconsistent patterns
-- ❌ Ignore errors or failures
-- ❌ Create confusing navigation
-- ❌ Overwhelm with too many options
+- No: Hide important actions
+- No: Leave users guessing
+- No: Use inconsistent patterns
+- No: Ignore errors or failures
+- No: Create confusing navigation
+- No: Overwhelm with too many options
 
 ---
 
@@ -1200,11 +1200,11 @@ CultivatED is an innovative educational technology solution that leverages advan
 - **Border Radius**: `rounded-2xl` (24px)
 
 ### Tone Checklist
-- ✅ Conversational
-- ✅ Encouraging
-- ✅ Direct
-- ✅ Results-focused
-- ✅ Accessible
+- Yes: Conversational
+- Yes: Encouraging
+- Yes: Direct
+- Yes: Results-focused
+- Yes: Accessible
 
 ---
 

@@ -4,7 +4,7 @@ This document explains the question format, how to author questions, and how to 
 
 ---
 
-## ⚠️ Copyright notice
+## Copyright notice
 
 Do **not** copy real SAT® questions from College Board materials into the public question bank. SAT® questions are copyrighted by the College Board. Use original, College Board-style practice questions that you have authored or licensed.
 
