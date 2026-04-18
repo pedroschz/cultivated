@@ -74,7 +74,7 @@ CultivatED is:
 ## Design System
 
 ### Design Philosophy
-CultivatED's design is inspired by gamified learning platforms (like Duolingo) with a focus on:
+CultivatED's design is inspired by gamified learning platforms with a focus on:
 - **Flat, clean aesthetics** with subtle depth
 - **Playful interactions** that feel rewarding
 - **Clear visual hierarchy** for easy navigation
