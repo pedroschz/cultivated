@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebaseClient";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 /**
  * Global client-side auth guard.
@@ -64,11 +64,19 @@ export function AuthGuard() {
                     const userRef = doc(db, 'users', user.uid);
                     const userDoc = await getDoc(userRef);
                     const data = userDoc.exists() ? userDoc.data() : null;
-                    const quickDone = data?.quickOnboardingCompleted === true || data?.onboardingCompleted === true;
+                    const flagDone = data?.quickOnboardingCompleted === true || data?.onboardingCompleted === true;
+                    // Legacy accounts may have name+username without the flag ever being written.
+                    const hasProfile = !!(data?.username && (data?.name || data?.displayName));
+                    const quickDone = flagDone || hasProfile;
 
                     if (!quickDone) {
                       window.location.href = '/onboarding/quick';
                       return;
+                    }
+
+                    // Backfill the flag so this path isn't re-evaluated on every load.
+                    if (hasProfile && !flagDone) {
+                      setDoc(userRef, { quickOnboardingCompleted: true }, { merge: true }).catch(() => {});
                     }
                   } catch (e) {
                     console.warn('[AuthGuard] Error checking onboarding on auth page:', e);
@@ -138,8 +146,10 @@ export function AuthGuard() {
               const userDoc = await getDoc(userRef);
               const data = userDoc.exists() ? userDoc.data() : null;
 
-              const quickOnboardingCompleted =
-                data?.quickOnboardingCompleted === true || data?.onboardingCompleted === true;
+              const flagDone = data?.quickOnboardingCompleted === true || data?.onboardingCompleted === true;
+              // Legacy accounts may have name+username without the flag ever being written.
+              const hasProfile = !!(data?.username && (data?.name || data?.displayName));
+              const quickOnboardingCompleted = flagDone || hasProfile;
               const onboardingCompleted = data?.onboardingCompleted === true;
 
               const isQuickOnboardingPage = pathname.startsWith('/onboarding/quick');
@@ -150,6 +160,11 @@ export function AuthGuard() {
                 console.log('[AuthGuard] User has not completed quick onboarding. Redirecting to /onboarding/quick');
                 window.location.href = '/onboarding/quick';
                 return;
+              }
+
+              // Backfill the flag so legacy accounts don't hit this check again.
+              if (hasProfile && !flagDone) {
+                setDoc(userRef, { quickOnboardingCompleted: true }, { merge: true }).catch(() => {});
               }
 
               // Already past the quick gate → don't keep them on the quick page

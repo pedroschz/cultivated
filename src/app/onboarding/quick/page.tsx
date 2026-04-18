@@ -60,7 +60,15 @@ export default function QuickOnboardingPage() {
         const snap = await getDoc(ref);
         const data = snap.exists() ? snap.data() : null;
 
-        if (data?.quickOnboardingCompleted === true || data?.onboardingCompleted === true) {
+        const flagDone = data?.quickOnboardingCompleted === true || data?.onboardingCompleted === true;
+        // Legacy accounts may have name+username without the flag ever being written.
+        const hasProfile = !!(data?.username && (data?.name || data?.displayName));
+
+        if (flagDone || hasProfile) {
+          // Backfill so this redirect never fires for this account again.
+          if (hasProfile && !flagDone && db) {
+            setDoc(ref, { quickOnboardingCompleted: true }, { merge: true }).catch(() => {});
+          }
           window.location.href = "/dashboard";
           return;
         }
