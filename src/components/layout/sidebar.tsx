@@ -21,7 +21,8 @@ import {
   Bot,
   Calendar,
   History,
-  School
+  School,
+  House
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth } from '@/lib/firebaseClient';
@@ -131,7 +132,7 @@ export function Sidebar({
       {/* Navigation menu section */}
       <div className="flex-1 px-4 py-2 overflow-y-auto no-scrollbar">
         <div className="space-y-2">
-          <NavButton href="/dashboard" icon={LayoutDashboard} label="Dashboard" asAnchor />
+          <NavButton href="/dashboard" icon={House} label="Dashboard" asAnchor />
           <NavButton href="/my-tutor" icon={Bot} label={tutorName} asAnchor />
           {schoolId && (
             <NavButton href="/school" icon={School} label="My School" />
