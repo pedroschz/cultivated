@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/api-auth';
 import { assertWithinLimits, getGeminiKeyForUser } from '@/lib/ai/aiUsageServer';
 
+export const dynamic = "force-static";
+
+
 /**
  * Mints a short-lived ephemeral Gemini auth token for the Live API so the
  * browser can open the WebSocket directly to Google without ever seeing the

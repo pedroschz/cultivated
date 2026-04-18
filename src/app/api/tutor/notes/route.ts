@@ -3,6 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { verifyAuth } from '@/lib/api-auth';
 import { assertWithinLimits, getGeminiKeyForUser, recordTokenCost } from '@/lib/ai/aiUsageServer';
 
+export const dynamic = "force-static";
+
+
 export async function POST(req: NextRequest) {
   try {
     const user = await verifyAuth(req);

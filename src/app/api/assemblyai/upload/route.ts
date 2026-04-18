@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/api-auth';
 
+export const dynamic = "force-static";
+
+
 /**
  * Streams a raw audio body to AssemblyAI's /v2/upload endpoint and returns the
  * resulting `upload_url`. Keeps `ASSEMBLYAI_API_KEY` server-side.

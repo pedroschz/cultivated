@@ -54,10 +54,6 @@
         "function": { "functionId": "assemblyaiTranscript" }
       },
       {
-        "source": "/api/assemblyai/transcript/:id",
-        "function": { "functionId": "assemblyaiTranscriptPoll" }
-      },
-      {
         "source": "/api/gemini/generate",
         "function": { "functionId": "geminiGenerate" }
       },

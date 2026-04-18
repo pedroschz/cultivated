@@ -3,6 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { verifyAuth } from '@/lib/api-auth';
 import { assertWithinLimits, getGeminiKeyForUser, recordChatMessage, recordTokenCost } from '@/lib/ai/aiUsageServer';
 
+export const dynamic = "force-static";
+
+
 // Define the tool definition here to keep it secure and consistent
 const TOOLS = [{
   functionDeclarations: [{

@@ -428,7 +428,7 @@ export function TutorLiveCoach({ userId, displayName, tutorName, tutorVoice, cla
       let attempts = 0;
       while (attempts < 60) {
         await new Promise((r) => setTimeout(r, 2000));
-        const pollRes = await fetch(`/api/assemblyai/transcript/${encodeURIComponent(id)}`, {
+        const pollRes = await fetch(`/api/assemblyai/transcript?id=${encodeURIComponent(id)}`, {
           headers: authHeader,
         });
         if (!pollRes.ok) break;

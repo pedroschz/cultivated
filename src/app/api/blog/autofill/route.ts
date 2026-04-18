@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { verifyAuth } from '@/lib/api-auth';
 
+export const dynamic = "force-static";
+
+
 export async function POST(req: NextRequest) {
   try {
     // Verify Authentication

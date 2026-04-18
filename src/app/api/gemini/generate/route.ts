@@ -3,6 +3,9 @@ import { GoogleGenAI } from '@google/genai';
 import { verifyAuth } from '@/lib/api-auth';
 import { assertWithinLimits, getGeminiKeyForUser, recordTokenCost } from '@/lib/ai/aiUsageServer';
 
+export const dynamic = "force-static";
+
+
 /**
  * Generic server-side proxy for one-shot `models.generateContent` calls so the
  * browser never needs the project's Gemini API key. Used by the procedure
