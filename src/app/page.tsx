@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { LandingHero } from "@/components/landing/LandingHero";
@@ -17,10 +17,8 @@ import { ScoreGrowthDemo } from "@/components/landing/ScoreGrowthDemo";
 import { Button } from "@/components/ui/button";
 import { Bot, LineChart, Target, Zap } from "lucide-react";
 import Link from "next/link";
-
 import { auth } from "@/lib/firebaseClient";
 import { onAuthStateChanged } from "firebase/auth";
-import { useState, useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
