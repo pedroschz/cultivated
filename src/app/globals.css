@@ -1,0 +1,311 @@
+@import "tailwindcss";
+@import 'katex/dist/katex.min.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-din); /* Changed to DIN Round Pro */
+  --font-display: var(--font-din); /* Changed to DIN Round Pro */
+  
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-edge: var(--primary-edge);
+  
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Duolingo Palette Custom Colors */
+  --color-feather-green: #58CC02;
+  --color-owl: 147 211 51; /* #93d333 - RGB format for rgb(var(--color-owl)) */
+  --color-tree-frog: 121 185 51; /* #79b933 - RGB format for rgb(var(--color-tree-frog)) */
+  --color-eel: #4B4B4B;
+  --color-snow: #FFFFFF;
+  --color-macaw: #1CB0F6;
+  --color-cardinal: #FF4B4B;
+  --color-bee: #FFC800;
+  --color-fox: #FF9600;
+  --color-humpback: #2B70C9;
+  --color-wolf: #777777;
+  --color-hare: #AFAFAF;
+  --color-swan: #E5E5E5;
+  --color-polar: #F7F7F7;
+}
+
+:root {
+  /* Duolingo Geometry */
+  --radius: 1rem; /* approx 16px */
+  
+  /* Color Palette - Light Mode (Default) */
+  /* Backgrounds */
+  --background: #FFFFFF; /* Snow */
+  --foreground: #4B4B4B; /* Eel */
+  
+  /* Cards & Popovers */
+  --card: #FFFFFF; /* Snow */
+  --card-foreground: #4B4B4B; /* Eel */
+  --popover: #FFFFFF;
+  --popover-foreground: #4B4B4B;
+  
+  /* Primary: Owl */
+  --primary: #93d333; 
+  --primary-foreground: #FFFFFF;
+  --primary-edge: #79b933; /* Tree Frog for 3D effect */
+  
+  /* Secondary: Macaw (Blue) */
+  --secondary: #1CB0F6;
+  --secondary-foreground: #FFFFFF;
+  
+  /* Muted */
+  --muted: #F7F7F7; /* Polar */
+  --muted-foreground: #AFAFAF; /* Hare */
+  
+  /* Accent: Light Grey for hover states */
+  --accent: #F4F4F5;
+  --accent-foreground: #4B4B4B;
+  
+  /* Destructive: Cardinal (Red) */
+  --destructive: #FF4B4B;
+  --destructive-foreground: #FFFFFF;
+  
+  /* Borders & Inputs */
+  --border: #E5E5E5; /* Swan */
+  --input: #E5E5E5; /* Swan */
+  --ring: #93d333; /* Owl */
+  
+  /* Status Colors */
+  --success: #93d333;
+  --success-foreground: #FFFFFF;
+  --warning: #FFC800; /* Bee */
+  --warning-foreground: #4B4B4B;
+  --info: #1CB0F6; /* Macaw */
+  --info-foreground: #FFFFFF;
+  
+  /* Chart Colors (Mapped to Brand Secondary) */
+  --chart-1: #93d333; /* Owl */
+  --chart-2: #1CB0F6; /* Macaw */
+  --chart-3: #FFC800; /* Bee */
+  --chart-4: #FF9600; /* Fox */
+  --chart-5: #FF4B4B; /* Cardinal */
+  
+  /* Sidebar */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #4B4B4B;
+  --sidebar-primary: #93d333;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F7F7F7; /* Polar */
+  --sidebar-accent-foreground: #4B4B4B;
+  --sidebar-border: #E5E5E5;
+  --sidebar-ring: #93d333;
+}
+
+.dark {
+  /* Dark Mode - Maintaining Flat Aesthetic but inverted brightness where appropriate */
+  /* Using dark grey/eel base */
+  
+  --background: #131F24; /* Very dark blue-grey (Duolingo dark mode approximation) */
+  --foreground: #FFFFFF; /* Snow */
+  
+  --card: #131F24;
+  --card-foreground: #FFFFFF;
+  --popover: #131F24;
+  --popover-foreground: #FFFFFF;
+  
+  /* Primary remains vibrant */
+  --primary: #93d333;
+  --primary-foreground: #FFFFFF;
+  --primary-edge: #79b933;
+  
+  /* Secondary */
+  --secondary: #1CB0F6;
+  --secondary-foreground: #FFFFFF;
+  
+  /* Muted */
+  --muted: #202F36; /* Slightly lighter dark */
+  --muted-foreground: #777777; /* Wolf */
+  
+  /* Accent */
+  --accent: #202F36; /* Using muted for accent */
+  --accent-foreground: #FFFFFF;
+  
+  /* Destructive: Cardinal (Red) */
+  --destructive: #FF4B4B;
+  --destructive-foreground: #FFFFFF;
+  
+  /* Borders & Inputs */
+  --border: #37464F; /* Dark grey border */
+  --input: #37464F;
+  --ring: #93d333;
+  
+  /* Status Colors */
+  --success: #93d333;
+  --success-foreground: #FFFFFF;
+  --warning: #FFC800;
+  --warning-foreground: #4B4B4B;
+  --info: #1CB0F6;
+  --info-foreground: #FFFFFF;
+  
+  /* Chart Colors (Mapped to Brand Secondary) */
+  --chart-1: #93d333;
+  --chart-2: #1CB0F6;
+  --chart-3: #FFC800;
+  --chart-4: #FF9600;
+  --chart-5: #FF4B4B;
+  
+  /* Sidebar */
+  --sidebar: #131F24;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #93d333;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #202F36;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #37464F;
+  --sidebar-ring: #93d333;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-foreground; /* Duolingo headings are usually bold */
+  }
+  
+  h1 { @apply text-3xl lg:text-4xl; }
+  h2 { @apply text-2xl lg:text-3xl; }
+  h3 { @apply text-xl lg:text-2xl; }
+  h4 { @apply text-lg lg:text-xl; }
+  
+  html {
+    scroll-behavior: smooth;
+    zoom: 0.8; /* Default 80% zoom for new users */
+  }
+  
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-din), sans-serif; /* Also update font-display utility */
+  }
+
+  .katex-display, .katex {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .katex-display > .katex, .katex-display > .katex .mord, .katex .mord {
+    white-space: nowrap;
+  }
+
+  /* Safe area utilities */
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  
+  /* Text gradient helper (optional, might not be used in flat design) */
+  .text-highlight {
+    color: var(--primary);
+  }
+
+  /* Blog post content padding */
+  .blog-prose-content h2 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+  }
+
+  .blog-prose-content h3 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.75rem;
+  }
+
+  .blog-prose-content h4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.75rem;
+  }
+
+  .blog-prose-content p {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-size: 1.125rem; /* 18px base */
+  }
+
+  @media (min-width: 768px) {
+    .blog-prose-content p {
+      font-size: 1.25rem; /* 20px on medium screens and up */
+    }
+  }
+
+  .blog-prose-content ul,
+  .blog-prose-content ol {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .blog-prose-content li {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 1.125rem; /* 18px base */
+  }
+
+  @media (min-width: 768px) {
+    .blog-prose-content li {
+      font-size: 1.25rem; /* 20px on medium screens and up */
+    }
+  }
+
+  .blog-prose-content blockquote {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}

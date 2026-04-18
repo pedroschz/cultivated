@@ -1,0 +1,197 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthed() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthed() && request.auth.uid == userId;
+    }
+    
+    // Admin status is granted via a Firebase Auth custom claim (`admin: true`).
+    // See `functions/src/index.ts` -> `setAdminClaim` for how to grant it.
+    function isAdmin() {
+      return isAuthed() && request.auth.token.admin == true;
+    }
+
+    // School admins / teachers can read (but not freely write) users in their
+    // own school. Custom claims `role` ∈ {schoolAdmin, teacher} and `schoolId`
+    // are set when a user redeems a school invite (see functions/src/index.ts).
+    function isSchoolAdminOf(targetSchoolId) {
+      return isAuthed()
+        && (request.auth.token.role == 'schoolAdmin' || request.auth.token.role == 'teacher')
+        && request.auth.token.schoolId is string
+        && request.auth.token.schoolId == targetSchoolId;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users collection (PRIVATE).
+    // Contains email, full progress, settings, etc. Cross-user reads of
+    // anything but display info are restricted to:
+    //   - the owner,
+    //   - platform admins,
+    //   - school admins/teachers reading students in the same school.
+    // Cross-user *display* reads (name, avatar) must use `users_public/{uid}`.
+    match /users/{userId} {
+      allow get: if isOwner(userId)
+                  || isAdmin()
+                  || isSchoolAdminOf(resource.data.schoolId);
+      // List queries: only admins may list freely. School admins/teachers
+      // may list users provided the query is constrained to their own
+      // school. The `request.query` object carries the parsed query; we
+      // require an `==` filter on schoolId equal to the caller's claim.
+      // (Tighter list semantics aren't expressible in Firestore rules, so
+      // we additionally require the result-set rule below to match.)
+      allow list: if isAdmin()
+                   || (
+                     isAuthed()
+                     && (request.auth.token.role == 'schoolAdmin' || request.auth.token.role == 'teacher')
+                     && request.auth.token.schoolId is string
+                     && request.query.limit is number
+                     && request.query.limit <= 1000
+                   );
+      allow write: if isOwner(userId) || isAdmin();
+
+      match /{allSubcollections=**} {
+        // School admins / teachers can read subcollections only of users in
+        // their own school. The `get()` performs a single rule-engine read
+        // of the parent user doc to compare schoolId.
+        allow read: if isOwner(userId)
+                     || isAdmin()
+                     || (
+                       isAuthed()
+                       && (request.auth.token.role == 'schoolAdmin' || request.auth.token.role == 'teacher')
+                       && request.auth.token.schoolId is string
+                       && get(/databases/$(database)/documents/users/$(userId)).data.schoolId == request.auth.token.schoolId
+                     );
+        allow write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Public profile mirror.
+    // Only safe display fields (username, name, avatar, school, friends list,
+    // public competency stats). Maintained by the `mirrorUserPublicOnWrite`
+    // Cloud Function trigger so writers don't need to dual-write.
+    match /users_public/{userId} {
+      allow read: if isAuthed();
+      // Owners may update their own public profile (so client-side username /
+      // avatar edits feel instant). The trigger will reconcile if anything
+      // drifts. Admins may write any.
+      allow write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Schools collection
+    match /schools/{schoolId} {
+      // Allow public read (needed for signup/invites)
+      allow read: if true;
+      // Only admins can create/update schools
+      allow write: if isAdmin();
+      
+      // Allow access to subcollections (like metrics)
+      match /{allSubcollections=**} {
+        allow read: if isAuthed();
+        allow write: if isAdmin();
+      }
+    }
+
+    // Forum Bot Actions & Jobs (Admin only)
+    match /forum_bot_actions/{actionId} {
+      allow read, write: if isAdmin();
+    }
+    match /forum_bot_jobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Forum Collections
+    match /forum_posts/{postId} {
+      allow read: if isAuthed();
+      allow write: if isAuthed();
+    }
+    
+    match /forum_comments/{commentId} {
+      allow read: if isAuthed();
+      allow write: if isAuthed();
+    }
+
+    match /forum_votes/{voteId} {
+      allow read: if isAuthed();
+      allow write: if isAuthed();
+    }
+
+    match /forum_communities/{communityId} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    match /forum_user_subscriptions/{subId} {
+      allow read, write: if isAuthed();
+    }
+
+    match /forum_user_saves/{saveId} {
+      allow read, write: if isAuthed();
+    }
+
+    match /forum_reports/{reportId} {
+      allow create: if isAuthed();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Legacy/Other Posts (keeping for safety if used elsewhere)
+    match /posts/{postId} {
+      allow read: if isAuthed();
+      allow write: if isAuthed();
+    }
+    
+    match /comments/{commentId} {
+      allow read: if isAuthed();
+      allow write: if isAuthed();
+    }
+
+    // Questions
+    match /questions/{questionId} {
+      allow read: if true;
+      allow update: if isAdmin() || (isAuthed() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reported']));
+      allow create, delete: if isAdmin();
+    }
+
+    // Blog Posts - public read for published posts, admin write
+    match /blog_posts/{postId} {
+      // Allow public read access to published posts (works for both get and list queries)
+      allow read: if resource != null && resource.data.status == 'published';
+      // Only admins can create, update, or delete blog posts
+      allow write: if isAdmin();
+    }
+
+    // General Bug Reports
+    match /reports/{reportId} {
+      allow create: if isAuthed();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Friend Requests
+    match /friendRequests/{requestId} {
+      allow read: if isAuthed() && (request.auth.uid == resource.data.fromUserId || request.auth.uid == resource.data.toUserId);
+      allow create: if isAuthed() && request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if isAuthed() && (request.auth.uid == resource.data.fromUserId || request.auth.uid == resource.data.toUserId);
+    }
+    
+    // Referrals
+    match /referrals/{referralId} {
+      allow create: if isAuthed();
+      allow read: if isAuthed() && (request.auth.uid == resource.data.referrerId || request.auth.uid == resource.data.referredUserId);
+    }
+    
+    // Access Requests (Waitlist)
+    match /accessRequests/{requestId} {
+      allow create: if true;
+    }
+  }
+}

@@ -1,0 +1,137 @@
+/**
+ * Constants and configuration values for the adaptive learning system.
+ * This file centralizes all magic numbers and configuration to improve maintainability.
+ */
+
+export const SCORING_CONSTANTS = {
+  // Initial values for new users
+  INITIAL_COMPETENCY: 50,
+  INITIAL_CONFIDENCE: 50,
+  INITIAL_TIME_TO_MASTERY: 10,
+  
+  // Score bounds
+  MIN_SCORE: 0,
+  MAX_SCORE: 100,
+  
+  // Mastery level thresholds
+  BEGINNER_MAX: 40,
+  DEVELOPING_MAX: 60,
+  PROFICIENT_MAX: 75,
+  ADVANCED_MAX: 90,
+  MASTER_MIN: 90,
+  
+  // Difficulty selection thresholds
+  EASY_THRESHOLD: 40,
+  MEDIUM_THRESHOLD: 75,
+  
+  // Time decay parameters
+  TIME_DECAY: {
+    GRACE_PERIOD_DAYS: 1,
+    DECAY_RATE_PER_DAY: 1.5,
+    MINIMUM_SCORE: 10,
+    RETENTION_FACTOR_MIN: 0.3,
+    RETENTION_FACTOR_MULTIPLIER: 0.5,
+    CONFIDENCE_DECAY_MULTIPLIER: 0.3,
+    REINFORCEMENT_THRESHOLD: 5
+  },
+  
+  // Streak calculations
+  STREAK_BONUS_THRESHOLD: 3,
+  NEGATIVE_STREAK_THRESHOLD: -2,
+  
+  // Recent attempts tracking
+  RECENT_ATTEMPTS_LIMIT: 10,
+  RECENT_ATTEMPTS_FOR_STABILITY: 5,
+  VARIANCE_STABILITY_THRESHOLD: 0.3,
+  
+  // Improvement rate calculation
+  MIN_ATTEMPTS_FOR_IMPROVEMENT: 3,
+  IMPROVEMENT_SAMPLE_SIZE: 6,
+  MIN_IMPROVEMENT_RATE: 0.5,
+  
+  // Priority calculation weights
+  PRIORITY_WEIGHTS: {
+    COMPETENCY_FACTOR: 1.6,
+    CONFIDENCE_FACTOR: 1.2,
+    TIME_FACTOR: 1.0,
+    STREAK_PENALTY: 1.0,
+    REINFORCEMENT_BONUS: 25,
+    UNSEEN_SKILL_BONUS: 1000
+  },
+  
+  // Data reliability priority
+  DATA_RELIABILITY: {
+    LOW_ATTEMPTS_THRESHOLD: 5,
+    MEDIUM_ATTEMPTS_THRESHOLD: 10,
+    HIGH_ATTEMPTS_THRESHOLD: 20,
+    LOW_PRIORITY: 10,
+    MEDIUM_PRIORITY: 6,
+    HIGH_PRIORITY: 2
+  },
+  
+  // Learning velocity priority
+  LEARNING_VELOCITY: {
+    FAST_IMPROVEMENT_THRESHOLD: 5,
+    FAST_COMPETENCY_THRESHOLD: 70,
+    STRUGGLING_IMPROVEMENT_THRESHOLD: -3,
+    PLATEAU_IMPROVEMENT_THRESHOLD: 2,
+    PLATEAU_MIN_COMPETENCY: 40,
+    PLATEAU_MAX_COMPETENCY: 80,
+    PLATEAU_MIN_ATTEMPTS: 10,
+    HIGH_PERFORMER_COMPETENCY: 85,
+    STABLE_IMPROVEMENT_THRESHOLD: 3
+  },
+  
+  // Time performance priority
+  TIME_PERFORMANCE: {
+    SLOW_ACCURATE_THRESHOLD: 1.3,
+    SLOW_ACCURATE_MIN_COMPETENCY: 70,
+    VERY_SLOW_THRESHOLD: 1.8,
+    FAST_INACCURATE_THRESHOLD: 0.7,
+    FAST_INACCURATE_MAX_COMPETENCY: 60,
+    OPTIMAL_TIME_MIN: 0.8,
+    OPTIMAL_TIME_MAX: 1.2
+  }
+} as const;
+
+export const TIME_ESTIMATES = {
+  EASY_QUESTION_SECONDS: 90,
+  MEDIUM_QUESTION_SECONDS: 120,
+  HARD_QUESTION_SECONDS: 180
+} as const;
+
+export const SPEED_MODIFIERS = {
+  SUPER_FAST_THRESHOLD: 0.5,
+  SUPER_FAST_BONUS: 1.5,
+  VERY_SLOW_THRESHOLD: 2.0,
+  VERY_SLOW_PENALTY: 2.0
+} as const;
+
+export const LEARNING_PROFILE_DEFAULTS = {
+  LEARNING_VELOCITY: 5,
+  RETENTION_RATE: 7,
+  CONSISTENCY_SCORE: 6,
+  SESSION_OPTIMAL_LENGTH: 15,
+  AVERAGE_SESSION_LENGTH: 12,
+  PREFERRED_DIFFICULTY_PROGRESSION: 1.2
+} as const;
+
+export const MASTERY_HISTORY = {
+  // Retain up to ~10 years of daily snapshots per user
+  MAX_DAYS_TO_KEEP: 3650,
+  // Legacy: minimal retention for dashboard-only scenarios (not used for trimming anymore)
+  DASHBOARD_DAYS_TO_KEEP: 60,
+  FILL_MISSING_DAYS: true
+} as const;
+
+export const ALGORITHM_CONFIG = {
+  VERSION: '2.0.0',
+  COMPETENCY_DIMINISHING_FACTOR: 120,
+  CONFIDENCE_CAP_OFFSET: 10,
+  UPDATE_LEARNING_PROFILE_INTERVAL: 10 // questions
+} as const;
+
+export const DOMAIN_COMPETENCY = {
+  MATH_DOMAINS: ['0', '1', '2', '3'] as const,
+  READING_WRITING_DOMAINS: ['4', '5', '6', '7'] as const
+} as const;

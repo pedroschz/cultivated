@@ -1,0 +1,28 @@
+CultivatED
+Copyright 2024-2026 Pedro Sánchez-Gil and CultivatED contributors
+
+This product includes software developed by the CultivatED contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+----
+
+Trademark notice:
+SAT® is a registered trademark of the College Board, which does not
+endorse and is not affiliated with this project. References to "SAT"
+in this codebase are nominative fair use to describe the standardized
+test that this software helps users prepare for.
+
+----
+
+Third-party assets not included in this repository:
+  - "DIN Round Pro" font family (commercial license required)
+  - "Brasley" font (commercial license required)
+
+These fonts are loaded at build time from a local `private-assets/`
+directory if available. The application will fall back to system fonts
+when they are not present. See README.md for details.

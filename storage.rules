@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthed() { return request.auth != null; }
+    function isOwner(userId) { return isAuthed() && request.auth.uid == userId; }
+    function isAdmin() { return isAuthed() && request.auth.token.admin == true; }
+
+    // Reasonable per-file size limit (10 MB) for user uploads.
+    function isUnderSizeLimit() {
+      return request.resource == null || request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Default: deny everything not explicitly allowed below.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Public assets (logos, marketing images, etc.) — read-only to the world,
+    // admin-only writes.
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Blog post images — public read, admin write.
+    match /blog-images/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin() && isUnderSizeLimit();
+    }
+
+    // School logos (path: `schools/{schoolId}/logo.png`) — public read, admin write.
+    match /schools/{schoolId}/{file=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isUnderSizeLimit();
+    }
+
+    // Per-user uploads (avatars, voice clips, scratch work, etc.).
+    // Owners can read/write only inside their own folder; admins can read.
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isUnderSizeLimit();
+    }
+  }
+}

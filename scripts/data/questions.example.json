@@ -1,0 +1,124 @@
+[
+  {
+    "id": "q_algebra_example_001",
+    "domain": 0,
+    "domainName": "Algebra",
+    "skill": "Linear equations in one variable",
+    "difficulty": 0,
+    "question": "If $2x - 4 = 10$, what is the value of $x$?",
+    "options": ["3", "5", "7", "9"],
+    "answer": 2,
+    "explanation": "Add 4 to both sides to get $2x = 14$, then divide by 2: $x = 7$."
+  },
+  {
+    "id": "q_algebra_example_002",
+    "domain": 0,
+    "domainName": "Algebra",
+    "skill": "Linear equations in two variables",
+    "difficulty": 1,
+    "question": "If $3x + 2y = 16$ and $x = 2$, what is the value of $y$?",
+    "options": ["3", "5", "7", "10"],
+    "answer": 1,
+    "explanation": "Substitute $x = 2$: $3(2) + 2y = 16 \\Rightarrow 6 + 2y = 16 \\Rightarrow 2y = 10 \\Rightarrow y = 5$."
+  },
+  {
+    "id": "q_advanced_math_example_001",
+    "domain": 1,
+    "domainName": "Advanced Math",
+    "skill": "Nonlinear functions",
+    "difficulty": 1,
+    "question": "Which of the following is equivalent to $(x + 3)^2 - 9$?",
+    "options": ["$x^2 + 9$", "$x^2 + 6x$", "$x^2 + 6x + 9$", "$x^2 - 9$"],
+    "answer": 1,
+    "explanation": "Expand: $(x+3)^2 - 9 = x^2 + 6x + 9 - 9 = x^2 + 6x$."
+  },
+  {
+    "id": "q_psda_example_001",
+    "domain": 2,
+    "domainName": "Problem-Solving and Data Analysis",
+    "skill": "Percentages",
+    "difficulty": 0,
+    "question": "A shirt originally costs $40. It is on sale for 25% off. What is the sale price?",
+    "options": ["$10", "$25", "$30", "$35"],
+    "answer": 2,
+    "explanation": "25% of $40 = $10. Sale price = $40 - $10 = $30."
+  },
+  {
+    "id": "q_geometry_example_001",
+    "domain": 3,
+    "domainName": "Geometry and Trigonometry",
+    "skill": "Area and volume",
+    "difficulty": 0,
+    "question": "A rectangle has a length of 8 cm and a width of 5 cm. What is its area?",
+    "options": ["26 cm²", "40 cm²", "13 cm²", "80 cm²"],
+    "answer": 1,
+    "explanation": "Area = length × width = 8 × 5 = 40 cm²."
+  },
+  {
+    "id": "q_rw_info_example_001",
+    "domain": 4,
+    "domainName": "Information and Ideas",
+    "skill": "Central Ideas and Details",
+    "difficulty": 1,
+    "passage": "Photosynthesis is the process by which plants use sunlight, water, and carbon dioxide to produce oxygen and energy in the form of glucose. This process occurs primarily in the chloroplasts of plant cells, where chlorophyll absorbs light energy. Without photosynthesis, most life on Earth could not exist, as it forms the base of nearly all food chains.",
+    "question": "Which of the following best states the central idea of the passage?",
+    "options": [
+      "Chlorophyll is the most important molecule in plant cells.",
+      "Photosynthesis is a fundamental process that sustains life on Earth.",
+      "Plants produce oxygen as a byproduct of glucose production.",
+      "Food chains depend entirely on sunlight."
+    ],
+    "answer": 1,
+    "explanation": "The passage emphasizes that photosynthesis 'forms the base of nearly all food chains' and that 'most life on Earth could not exist' without it, making option B the central idea."
+  },
+  {
+    "id": "q_rw_craft_example_001",
+    "domain": 5,
+    "domainName": "Craft and Structure",
+    "skill": "Words in Context",
+    "difficulty": 1,
+    "passage": "The scientist's argument was so compelling that even her most ardent critics were forced to concede the validity of her findings.",
+    "question": "As used in the passage, 'ardent' most nearly means:",
+    "options": ["Occasional", "Mild", "Passionate", "Confused"],
+    "answer": 2,
+    "explanation": "'Ardent' means passionate or enthusiastic. In context, 'ardent critics' are her most passionate or fervent opponents."
+  },
+  {
+    "id": "q_rw_expression_example_001",
+    "domain": 6,
+    "domainName": "Expression of Ideas",
+    "skill": "Transitions",
+    "difficulty": 1,
+    "question": "The new policy reduced costs significantly. ______, it led to improved employee satisfaction scores.\n\nWhich transition word or phrase best completes the sentence?",
+    "options": ["However", "Furthermore", "Therefore", "In contrast"],
+    "answer": 1,
+    "explanation": "'Furthermore' (or 'Moreover') adds a second positive outcome. 'However' and 'In contrast' signal contradiction. 'Therefore' implies causation, which is not stated."
+  },
+  {
+    "id": "q_rw_conventions_example_001",
+    "domain": 7,
+    "domainName": "Standard English Conventions",
+    "skill": "Boundaries",
+    "difficulty": 0,
+    "question": "Which version correctly uses punctuation?\n\nA) The storm was fierce, trees fell across the road.\nB) The storm was fierce; trees fell across the road.\nC) The storm was fierce trees fell across the road.\nD) The storm was fierce: trees fell across the road.",
+    "options": [
+      "The storm was fierce, trees fell across the road.",
+      "The storm was fierce; trees fell across the road.",
+      "The storm was fierce trees fell across the road.",
+      "The storm was fierce: trees fell across the road."
+    ],
+    "answer": 1,
+    "explanation": "A semicolon correctly separates two independent clauses. Option A is a comma splice. Option C is a run-on. Option D uses a colon incorrectly (a colon introduces a list or explanation, not a second independent clause of equal weight)."
+  },
+  {
+    "id": "q_geometry_example_002",
+    "domain": 3,
+    "domainName": "Geometry and Trigonometry",
+    "skill": "Right triangles and trigonometry",
+    "difficulty": 2,
+    "question": "In a right triangle, one leg has length 5 and the hypotenuse has length 13. What is the length of the other leg?",
+    "options": ["8", "10", "12", "14"],
+    "answer": 2,
+    "explanation": "By the Pythagorean theorem: $a^2 + b^2 = c^2$. So $5^2 + b^2 = 13^2 \\Rightarrow 25 + b^2 = 169 \\Rightarrow b^2 = 144 \\Rightarrow b = 12$."
+  }
+]

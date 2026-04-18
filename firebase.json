@@ -1,0 +1,80 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "northamerica-northeast1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "out",
+    "cleanUrls": true,
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/releasePracticeSession",
+        "function": {
+          "functionId": "releasePracticeSession"
+        }
+      },
+      {
+        "source": "/sendAdminEmail",
+        "function": {
+          "functionId": "sendAdminEmail"
+        }
+      },
+      {
+        "source": "/api/chat",
+        "function": {
+          "functionId": "chatApi"
+        }
+      },
+      {
+        "source": "/api/tutor/help",
+        "function": {
+          "functionId": "tutorHelpApi"
+        }
+      },
+      {
+        "source": "/api/tutor/notes",
+        "function": {
+          "functionId": "tutorNotesApi"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/releasePracticeSession",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-store" }
+        ]
+      }
+    ]
+  }
+}

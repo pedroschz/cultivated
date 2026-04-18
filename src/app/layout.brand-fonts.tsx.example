@@ -1,0 +1,33 @@
+// Example: enable commercial brand fonts in src/app/layout.tsx.
+//
+// 1. Place licensed font files at:
+//      private-assets/fonts/brasley.otf
+//      private-assets/fonts/DIN Round Pro/dinroundpro_light.otf
+//      private-assets/fonts/DIN Round Pro/dinroundpro.otf
+//      private-assets/fonts/DIN Round Pro/dinroundpro_medi.otf
+//      private-assets/fonts/DIN Round Pro/dinroundpro_bold.otf
+//      private-assets/fonts/DIN Round Pro/dinroundpro_black.otf
+// 2. Run `npm run setup:fonts` (copies them into public/).
+// 3. In src/app/layout.tsx, REPLACE the Inter-based `dinRoundPro` and
+//    `brasley` definitions with the snippet below, and add the
+//    `import localFont from "next/font/local";` line at the top.
+
+import localFont from "next/font/local";
+
+export const brasley = localFont({
+  src: "../../public/brasley.otf",
+  variable: "--font-brasley",
+  display: "swap",
+});
+
+export const dinRoundPro = localFont({
+  src: [
+    { path: "../../public/DIN Round Pro/dinroundpro_light.otf", weight: "300", style: "normal" },
+    { path: "../../public/DIN Round Pro/dinroundpro.otf", weight: "400", style: "normal" },
+    { path: "../../public/DIN Round Pro/dinroundpro_medi.otf", weight: "500", style: "normal" },
+    { path: "../../public/DIN Round Pro/dinroundpro_bold.otf", weight: "700", style: "normal" },
+    { path: "../../public/DIN Round Pro/dinroundpro_black.otf", weight: "900", style: "normal" },
+  ],
+  variable: "--font-din",
+  display: "swap",
+});
