@@ -176,6 +176,7 @@ export default function LeaderboardPage() {
   const [hasSetDefaultScope, setHasSetDefaultScope] = useState(false);
   const [userSchoolFetched, setUserSchoolFetched] = useState(false);
   const [userFriends, setUserFriends] = useState<string[]>([]);
+  const [authResolved, setAuthResolved] = useState(false);
 
   const allowedSchools = new Set(getAllowedSchools());
 
@@ -204,11 +205,13 @@ export default function LeaderboardPage() {
           console.error('Error fetching user data:', error);
         } finally {
           setUserSchoolFetched(true);
+          setAuthResolved(true);
         }
       } else {
         setUserSchool(null);
         setUserFriends([]);
         setUserSchoolFetched(true);
+        setAuthResolved(true);
       }
     });
     return () => unsubscribe();
@@ -274,6 +277,7 @@ export default function LeaderboardPage() {
   };
 
   useEffect(() => {
+    if (!authResolved) return;
     const loadData = async () => {
       setIsLoading(true);
       await fetchLeaderboard();
@@ -281,7 +285,7 @@ export default function LeaderboardPage() {
     };
     
     loadData();
-  }, [user]);
+  }, [user, authResolved]);
 
   // Decide default scope once we know the user's school
   useEffect(() => {
